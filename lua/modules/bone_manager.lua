@@ -1,5 +1,4 @@
 -- lua\modules\bone_manager.lua
 BoneManager = {}
 
-function BoneManager.RequestBonePos()
-end
+hook.Add("ENP_ProxyTimeout", "identifier", function(proxy) end)
