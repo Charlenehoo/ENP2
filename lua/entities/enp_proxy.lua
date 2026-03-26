@@ -15,13 +15,21 @@ function ENT:Initialize() -- https://wiki.facepunch.com/gmod/ENTITY:Initialize
 	self:SetCollisionGroup(COLLISION_GROUP_NONE)
 end
 
+-- 获取当前选中的骨骼位置（不自动前进）
 function ENT:GetNextBonePos()
 	local victim = self.victim
 	if not IsValid(victim) then
-		return
+		return vector_origin
 	end
 
-	-- 首次调用时构建有效骨骼索引列表（缓存）
+	-- 如果 victim 发生变化，清空缓存并重建
+	if self.lastVictim ~= victim then
+		self.validBones = nil
+		self.currentBoneIndex = 0
+		self.lastVictim = victim
+	end
+
+	-- 构建有效骨骼索引列表（仅首次或 victim 变化时）
 	if not self.validBones then
 		self.validBones = {}
 		local rootPos = victim:GetPos()
@@ -30,26 +38,40 @@ function ENT:GetNextBonePos()
 			local bonePos, _ = victim:GetBonePosition(i)
 			local v = bonePos - rootPos
 			if v:LengthSqr() > EPS then
-				table.insert(self.validBones, i) -- 存储索引，而非位置
+				table.insert(self.validBones, i)
 			end
 		end
-		self.currentBoneIndex = 0 -- 当前使用的索引（0表示未开始）
+		self.currentBoneIndex = 0
 	end
 
-	-- 若无有效骨骼，回退到 EyePos
+	-- 无有效骨骼时回退到 EyePos
 	if #self.validBones == 0 then
 		return victim:EyePos()
 	end
 
-	-- 循环到下一个骨骼
-	self.currentBoneIndex = (self.currentBoneIndex % #self.validBones) + 1
+	-- 首次调用时，自动选中第一个骨骼
+	if self.currentBoneIndex == 0 then
+		self.currentBoneIndex = 1
+	end
+
 	local boneIndex = self.validBones[self.currentBoneIndex]
 	local bonePos, _ = victim:GetBonePosition(boneIndex)
 	return bonePos
 end
 
+-- 超时时前进到下一个骨骼
+function ENT:AdvanceToNextBone()
+	if not self.validBones or #self.validBones == 0 then
+		return
+	end
+	-- 循环递增索引
+	self.currentBoneIndex = (self.currentBoneIndex % #self.validBones) + 1
+end
+
+-- 计算理想位置（基于当前骨骼）
 function ENT:GetIdealPos()
-	local direction = self.victim:EyePos() - self.attacker:GetShootPos() -- attacker -> victim
+	local targetPos = self:GetNextBonePos()
+	local direction = targetPos - self.attacker:GetShootPos()
 	direction:Normalize()
 	return self.attacker:GetShootPos() + direction * MIN_OFFSET
 end

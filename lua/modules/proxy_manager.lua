@@ -63,6 +63,17 @@ hook.Add("Tick", "ENP_ProxyManager_Update", function()
 	end
 end)
 
+hook.Add("ENP_ProxyTimeout", "ENP_Proxy_AdvanceBone", function(proxy)
+	if IsValid(proxy) then
+		proxy:AdvanceToNextBone() -- 前进到下一个骨骼
+		proxy:ResetTimeout() -- 重置超时，开始新一轮计时
+		Debugger.Print(
+			string.format("[ProxyManager] Proxy %s advanced to next bone and reset timeout", tostring(proxy)),
+			Debugger.LEVEL.TRACE
+		)
+	end
+end)
+
 hook.Add("ENP_BulletHit", "ENP_Proxy_UpdateHitTime", function(proxy, isVictimHit, tr)
 	if not IsValid(proxy) then
 		return
