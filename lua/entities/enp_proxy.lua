@@ -97,7 +97,6 @@ end
 
 function ENT:Init(victim, attacker)
 	self.victim = victim
-	self.originalVictim = victim
 	self.attacker = attacker
 
 	self:ResetTimeout()
