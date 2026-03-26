@@ -29,6 +29,7 @@ local function RequestProxy(victim, attacker)
 	if IsValid(proxy) then
 		table.insert(_proxies, proxy)
 		Debugger.Print(string.format("[ProxyManager] Created proxy %s", tostring(proxy)), Debugger.LEVEL.INFO)
+		return proxy
 	end
 end
 

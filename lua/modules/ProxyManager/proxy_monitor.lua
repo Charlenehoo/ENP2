@@ -49,16 +49,16 @@ local function OnEntityFireBullets(entity, data)
 
 	local victim = proxy.victim -- 不检查有效性
 
-	Debugger.Print(
-		string.format(
-			"[ENP Monitor] Bullet fired from %s (shooter=%s, proxy=%s, victim=%s)",
-			tostring(entity),
-			tostring(actualShooter),
-			tostring(proxy),
-			tostring(victim)
-		),
-		Debugger.LEVEL.TRACE
-	)
+	-- Debugger.Print(
+	-- 	string.format(
+	-- 		"[ENP Monitor] Bullet fired from %s (shooter=%s, proxy=%s, victim=%s)",
+	-- 		tostring(entity),
+	-- 		tostring(actualShooter),
+	-- 		tostring(proxy),
+	-- 		tostring(victim)
+	-- 	),
+	-- 	Debugger.LEVEL.TRACE
+	-- )
 
 	local originalCallback = data.Callback
 
@@ -66,7 +66,7 @@ local function OnEntityFireBullets(entity, data)
 		local entityHit = tr.Entity
 		local isVictimHit = IsVictimHit(victim, entityHit)
 
-		Debugger.Print(string.format("[ENP Monitor] Hit entity: %s", tostring(entityHit)), Debugger.LEVEL.TRACE)
+		-- Debugger.Print(string.format("[ENP Monitor] Hit entity: %s", tostring(entityHit)), Debugger.LEVEL.TRACE)
 		if isVictimHit then
 			Debugger.Print("[ENP Monitor] Hit the victim (or its ragdoll)", Debugger.LEVEL.INFO)
 		else

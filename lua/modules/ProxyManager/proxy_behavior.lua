@@ -1,4 +1,5 @@
 -- lua/modules/ProxyManager/proxy_behavior.lua
+local Debugger = include("modules/util/debugger.lua")
 local Wall = include("modules/util/wall.lua")
 local Predict = include("modules/util/predict.lua")
 
@@ -63,6 +64,19 @@ hook.Add("ENP_ProxyTimeout", "ENP_ProxyBehavior_AdvanceBone", function(proxy)
     local result = Predict.PredictPenetration(walls, pen, maxLayers)
 
     if result == Predict.PenetrationResult.CANNOT_PENETRATE then
+        -- 构建墙壁厚度描述（包含每层的厚度、材质、入射角）
+        local wallDesc = {}
+        for i, w in ipairs(walls) do
+            table.insert(wallDesc, string.format(
+                "layer%d: thickness=%.2f, matType=%d, angle=%.2f",
+                i, w.thickness, w.matType, w.incidentAngle
+            ))
+        end
+        local wallsStr = table.concat(wallDesc, "; ")
+        Debugger.Print(string.format(
+            "[ProxyBehavior] Removing proxy %s due to cannot penetrate (pen=%f, maxLayers=%d, walls=[%s])",
+            tostring(proxy), pen, maxLayers, wallsStr
+        ), Debugger.LEVEL.INFO)
         proxy:Remove()
     end
 end)
