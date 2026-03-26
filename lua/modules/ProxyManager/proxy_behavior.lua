@@ -1,6 +1,6 @@
 -- lua/modules/ProxyManager/proxy_behavior.lua
-local Wall = include("modules/wall.lua")
-local Predict = include("modules/predict.lua")
+local Wall = include("modules/util/wall.lua")
+local Predict = include("modules/util/predict.lua")
 
 local TIMEOUT_SECONDS = 0.15
 

@@ -1,5 +1,5 @@
 -- lua/modules/ProxyManager/proxy_monitor.lua
-local Debugger = include("modules/debugger.lua") -- 使用统一的调试模块
+local Debugger = include("modules/util/debugger.lua")
 
 local PROXY_CLASS = ProxyManager.PROXY_CLASS
 

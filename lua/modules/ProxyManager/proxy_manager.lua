@@ -1,5 +1,5 @@
 -- lua\modules\ProxyManager\proxy_manager.lua
-local Debugger = include("modules/debugger.lua")
+local Debugger = include("modules/util/debugger.lua")
 
 local ProxyManager = {}
 
