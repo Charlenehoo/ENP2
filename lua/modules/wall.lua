@@ -103,6 +103,49 @@ local function MeasureThickness(params)
     return thickness, exitPos, matType
 end
 
+--- 世界墙体快速测量：利用 TraceResult 的 FractionLeftSolid 字段直接计算厚度
+--- 当射线起点在固体内部时，该字段表示从起点到离开固体的归一化距离
+--- @param params table { startPos, dir, maxDist, firstMatType }
+--- @return number, Vector, number
+local function MeasureWorldThicknessFast(params)
+    local startPos = params.startPos
+    local dir = params.dir
+    local maxDist = params.maxDist
+    local firstMatType = params.firstMatType or 0
+
+    -- 计算射线终点（基于最大距离）
+    local endPos = startPos + dir * maxDist
+
+    -- 执行一条从 startPos 到 endPos 的射线，用于获取 FractionLeftSolid
+    local trace = util.TraceLine({
+        start = startPos,
+        endpos = endPos,
+        mask = MASK_SHOT,
+    })
+
+    -- 如果射线起点不在固体内部，无法使用 FractionLeftSolid，回退到通用方法
+    if not trace.StartSolid then
+        return MeasureThickness(params)
+    end
+
+    -- FractionLeftSolid 为 0 表示整个射线都在固体内部（未穿出），返回最大距离
+    if trace.FractionLeftSolid == 0 then
+        return maxDist, endPos, firstMatType
+    end
+
+    -- 计算出口点：startPos + dir * (maxDist * FractionLeftSolid)
+    local exitT = maxDist * trace.FractionLeftSolid
+    local exitPos = startPos + dir * exitT
+
+    -- 厚度 = 出口点到起点距离（即为 exitT）
+    local thickness = exitT
+
+    -- 获取材质类型：优先使用出口点的材质，否则使用入口材质
+    local matType = trace.MatType or firstMatType
+
+    return thickness, exitPos, matType
+end
+
 --- 实体墙快速测量：基于扩展 AABB 直接射线求交，性能更优。
 --- 若起点不在扩展 AABB 内或求交失败，则自动回退到通用测量。
 --- @param params table { startPos, dir, entity, maxDist, firstMatType }
@@ -202,7 +245,7 @@ local function GetWallInfoAlongLine(attacker, victim, attackerPos, victimPos)
 
         local thickness, exitPos, matType
         if isWorld then
-            thickness, exitPos, matType = MeasureThickness(measureParams)
+            thickness, exitPos, matType = MeasureWorldThicknessFast(measureParams)
         else
             thickness, exitPos, matType = MeasureEntityThicknessFast(measureParams)
         end
