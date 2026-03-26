@@ -54,4 +54,4 @@ end
 ProxyManager.PROXY_CLASS = PROXY_CLASS
 ProxyManager.RequestProxy = RequestProxy
 ProxyManager.ValidProxies = ValidProxies
-return ProxyManager
+_G.ProxyManager = ProxyManager

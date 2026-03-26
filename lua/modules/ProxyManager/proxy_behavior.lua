@@ -1,5 +1,4 @@
 -- lua/modules/ProxyManager/proxy_behavior.lua
-local ProxyManager = include("modules/ProxyManager/proxy_manager.lua")
 
 local TIMEOUT_SECONDS = 0.15
 

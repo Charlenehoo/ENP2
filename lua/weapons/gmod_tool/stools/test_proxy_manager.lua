@@ -1,4 +1,5 @@
 -- lua/weapons/gmod_tool/stools/test_proxy_manager.lua
+
 TOOL.Category = "Test"
 TOOL.Name = "Test ProxyManager"
 

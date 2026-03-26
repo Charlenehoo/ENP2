@@ -1,5 +1,4 @@
 -- lua/modules/ProxyManager/ragdoll_linker.lua
-local ProxyManager = include("modules/ProxyManager/proxy_manager.lua")
 
 local function _UpdateProxyVictim(owner, ragdoll)
     for proxy in ProxyManager.ValidProxies() do
