@@ -6,7 +6,7 @@ local Predict = include("modules/util/predict.lua")
 local TIMEOUT_SECONDS = 0.15
 local HITRATE_WINDOW = 3.0
 local HITRATE_THRESHOLD = 0.1
-local REMOVAL_DELAY = 6.0
+local REMOVAL_DELAY = 3.0
 
 local lastPrintTime = {}
 
@@ -105,32 +105,6 @@ hook.Add("ENP_BulletHit", "ENP_ProxyBehavior_ResetTimeout", function(proxy, isVi
 	end
 end)
 
--- 独立辅助函数：判断当前代理是否应该被移除（基于墙壁和命中率）
-local function ShouldRemoveNow(proxy, attacker, victim, attackerPos, victimPos, pen, maxLayers)
-	local walls = Wall.GetWallInfoAlongLine(attacker, victim, attackerPos, victimPos)
-	if #walls == 0 then
-		return false
-	end
-
-	local result = Predict.PredictPenetration(walls, pen, maxLayers)
-	if result == Predict.PenetrationResult.CANNOT_PENETRATE then
-		return true
-	elseif result == Predict.PenetrationResult.UNCERTAIN then
-		local keepProxy = false
-		if proxy.validBones then
-			for _, boneIndex in ipairs(proxy.validBones) do
-				local hitRate = proxy:GetHitRate(boneIndex, HITRATE_WINDOW)
-				if hitRate and hitRate >= HITRATE_THRESHOLD then
-					keepProxy = true
-					break
-				end
-			end
-		end
-		return not keepProxy
-	end
-	return false
-end
-
 hook.Add("ENP_ProxyTimeout", "ENP_ProxyBehavior_AdvanceBone", function(proxy)
 	if not IsValid(proxy) then
 		return
@@ -160,57 +134,79 @@ hook.Add("ENP_ProxyTimeout", "ENP_ProxyBehavior_AdvanceBone", function(proxy)
 	local attackerPos = attacker:GetShootPos()
 	local victimPos = victim:GetPos()
 
-	-- 延迟移除逻辑
+	local walls = Wall.GetWallInfoAlongLine(attacker, victim, attackerPos, victimPos, proxy)
+	local result = Predict.PredictPenetration(walls, pen, maxLayers)
+	local overallHitRate = proxy:GetOverallHitRate(HITRATE_WINDOW)
+
+	-- 基于穿透结果和命中率确定是否应移除
+	local shouldRemoveNow = false
+	local removalReason = nil
+	if result == Predict.PenetrationResult.CANNOT_PENETRATE then
+		shouldRemoveNow = true
+		removalReason = string.format("cannot penetrate (pen=%f, maxLayers=%d)", pen, maxLayers)
+	elseif result == Predict.PenetrationResult.UNCERTAIN then
+		local keepProxy = false
+		if proxy.validBones then
+			for _, boneIndex in ipairs(proxy.validBones) do
+				local hitRate = proxy:GetHitRate(boneIndex, HITRATE_WINDOW)
+				if hitRate and hitRate >= HITRATE_THRESHOLD then
+					keepProxy = true
+					break
+				end
+			end
+		end
+		shouldRemoveNow = not keepProxy
+		if shouldRemoveNow then
+			removalReason = "uncertain, all bone hit rates below threshold"
+		end
+	else -- CAN_PENETRATE
+		shouldRemoveNow = false
+	end
+
+	if overallHitRate ~= nil and overallHitRate == 0 then
+		shouldRemoveNow = true
+		removalReason = string.format("overall hit rate is 0") --  (hits=%d, total=%d)", totalHits, totalShots) -- 注意这里 totalHits/totalShots 需要从统计中获取，可改用字符串
+	end
+
 	local pending = proxy.pendingRemoval
 	local checkTime = proxy.removalCheckTime
 
 	if pending then
-		-- 已在等待中
+		-- 持续检测：条件不再满足则立即取消 pending
+		if not shouldRemoveNow then
+			Debugger.Print(
+				string.format(
+					"[ProxyBehavior] Cancelling pending removal for proxy %s (condition cleared during pending)",
+					tostring(proxy)
+				),
+				Debugger.LEVEL.INFO
+			)
+			proxy.pendingRemoval = nil
+			proxy.removalCheckTime = nil
+			return
+		end
+
+		-- 条件仍然满足，检查是否到达移除时间
 		if CurTime() >= checkTime then
-			-- 时间到，执行二次检查
-			if ShouldRemoveNow(proxy, attacker, victim, attackerPos, victimPos, pen, maxLayers) then
-				local walls = Wall.GetWallInfoAlongLine(attacker, victim, attackerPos, victimPos)
-				LogProxyRemoval(proxy, walls, "confirmed after delay")
-				proxy:Remove()
-			else
-				Debugger.Print(
-					string.format(
-						"[ProxyBehavior] Cancelling removal for proxy %s (condition cleared)",
-						tostring(proxy)
-					),
-					Debugger.LEVEL.INFO
-				)
-			end
-			-- 清除等待状态
+			LogProxyRemoval(proxy, walls, "confirmed after delay")
+			proxy:Remove()
 			proxy.pendingRemoval = nil
 			proxy.removalCheckTime = nil
 		end
-		-- 时间未到则什么都不做
 	else
-		-- 第一次超时，检查是否应进入等待
-		if ShouldRemoveNow(proxy, attacker, victim, attackerPos, victimPos, pen, maxLayers) then
-			local walls = Wall.GetWallInfoAlongLine(attacker, victim, attackerPos, victimPos)
-			local result = Predict.PredictPenetration(walls, pen, maxLayers)
-			local reason = ""
-			if result == Predict.PenetrationResult.CANNOT_PENETRATE then
-				reason = string.format("cannot penetrate (pen=%f, maxLayers=%d)", pen, maxLayers)
-			elseif result == Predict.PenetrationResult.UNCERTAIN then
-				reason = "uncertain, all bone hit rates below threshold"
-			end
-
+		-- 第一次超时，需要进入 pending 状态
+		if shouldRemoveNow then
 			Debugger.Print(
 				string.format(
 					"[ProxyBehavior] Proxy %s entering pending removal (reason: %s), will recheck in %.1f seconds",
 					tostring(proxy),
-					reason,
+					removalReason or "unknown",
 					REMOVAL_DELAY
 				),
 				Debugger.LEVEL.INFO
 			)
-
 			proxy.pendingRemoval = true
 			proxy.removalCheckTime = CurTime() + REMOVAL_DELAY
 		end
-		-- 否则什么都不做
 	end
 end)

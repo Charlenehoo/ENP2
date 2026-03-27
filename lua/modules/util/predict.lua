@@ -13,6 +13,10 @@ local PenetrationResult = {
 local function PredictPenetration(walls, pen, maxLayers, ricochetAngleMax)
 	ricochetAngleMax = ricochetAngleMax or 45
 
+	if not walls or #walls == 0 then
+		return PenetrationResult.CAN_PENETRATE
+	end
+
 	local layers = 0
 	local cost_min = 0 -- 最小消耗（随机因子 0.81）
 	local cost_max = 0 -- 最大消耗（随机因子 1.21）

@@ -178,3 +178,30 @@ function ENT:GetHitRate(boneIndex, window)
 	end
 	return hits / total
 end
+
+-- 获取所有骨骼在时间窗口内的总体命中率（自动清理各骨骼的过期记录）
+function ENT:GetOverallHitRate(window)
+	if not self.hitStats then
+		return nil
+	end
+	local cutoff = CurTime() - window
+	local totalShots = 0
+	local totalHits = 0
+	for boneIndex, queue in pairs(self.hitStats) do
+		-- 清理该骨骼的过期记录（保持与 GetHitRate 一致的 FIFO 清理）
+		while #queue > 0 and queue[1].time < cutoff do
+			table.remove(queue, 1)
+		end
+		-- 统计有效记录
+		for _, rec in ipairs(queue) do
+			totalShots = totalShots + 1
+			if rec.hit then
+				totalHits = totalHits + 1
+			end
+		end
+	end
+	if totalShots == 0 then
+		return nil
+	end
+	return totalHits / totalShots
+end
