@@ -104,12 +104,14 @@ function LogicPlayer:__index(key)
     local current = _GetCurrentEntity(self)
     if current then
         local value = current[key]
-        if type(value) == "function" then
-            return function(...)
-                return value(current, ...)
+        if value ~= nil then
+            if type(value) == "function" then
+                return function(...)
+                    return value(current, ...)
+                end
+            else
+                return value
             end
-        else
-            return value
         end
     end
     return LogicPlayer[key]
