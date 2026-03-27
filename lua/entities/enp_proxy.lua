@@ -15,6 +15,21 @@ function ENT:Initialize() -- https://wiki.facepunch.com/gmod/ENTITY:Initialize
 	self:SetCollisionGroup(COLLISION_GROUP_NONE)
 end
 
+function ENT:Init(victim, attacker)
+	self.victim = victim
+	self.attacker = attacker
+
+	self:ResetTimeout()
+
+	self:SetNPCClass(CLASS_NONE)
+	attacker:AddEntityRelationship(self, D_HT, 0)
+
+	local InitPos = self:GetIdealPos()
+	self:SetPos(InitPos)
+	attacker:SetEnemy(self)
+	attacker:UpdateEnemyMemory(self, InitPos)
+end
+
 -- 获取当前选中的骨骼位置（不自动前进）
 function ENT:GetNextBonePos()
 	local victim = self.victim
@@ -93,19 +108,4 @@ function ENT:CheckTimeout(timeoutSeconds)
 		return true
 	end
 	return false
-end
-
-function ENT:Init(victim, attacker)
-	self.victim = victim
-	self.attacker = attacker
-
-	self:ResetTimeout()
-
-	self:SetNPCClass(CLASS_NONE)
-	attacker:AddEntityRelationship(self, D_HT, 0)
-
-	local InitPos = self:GetIdealPos()
-	self:SetPos(InitPos)
-	attacker:SetEnemy(self)
-	attacker:UpdateEnemyMemory(self, InitPos)
 end
