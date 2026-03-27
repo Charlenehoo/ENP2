@@ -102,6 +102,18 @@ end)
 hook.Add("ENP_BulletHit", "ENP_ProxyBehavior_ResetTimeout", function(proxy, isVictimHit)
 	if isVictimHit and IsValid(proxy) then
 		proxy:ResetTimeout()
+		-- Cancel any pending removal that was scheduled based on heuristics
+		if proxy.pendingRemoval then
+			Debugger.Print(
+				string.format(
+					"[ProxyBehavior] Cancelling pending removal for proxy %s due to bullet hit",
+					tostring(proxy)
+				),
+				Debugger.LEVEL.INFO
+			)
+			proxy.pendingRemoval = nil
+			proxy.removalCheckTime = nil
+		end
 	end
 end)
 
