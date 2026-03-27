@@ -19,6 +19,8 @@ function ENT:Init(victim, attacker)
 	self.victim = victim
 	self.attacker = attacker
 
+	self:InitHitStats()
+
 	self:ResetTimeout()
 
 	self:SetNPCClass(CLASS_NONE)
@@ -108,4 +110,71 @@ function ENT:CheckTimeout(timeoutSeconds)
 		return true
 	end
 	return false
+end
+
+function ENT:InitHitStats()
+	if not self.hitStats then
+		self.hitStats = {}
+	end
+	if not self.nextShotID then
+		self.nextShotID = 1
+	end
+end
+
+-- 记录一次射击，返回一个唯一 ID
+function ENT:RecordShot(boneIndex)
+	self:InitHitStats()
+	if not self.hitStats[boneIndex] then
+		self.hitStats[boneIndex] = {}
+	end
+	local shotID = self.nextShotID
+	self.nextShotID = self.nextShotID + 1
+	if self.nextShotID > 1048576 then -- 2^20
+		self.nextShotID = 1
+	end
+	table.insert(self.hitStats[boneIndex], {
+		id = shotID,
+		time = CurTime(),
+		hit = false,
+	})
+	return shotID
+end
+
+-- 根据 ID 将对应的射击记录标记为命中
+function ENT:RecordHit(boneIndex, shotID)
+	if not self.hitStats or not self.hitStats[boneIndex] then
+		return
+	end
+	local queue = self.hitStats[boneIndex]
+	for _, rec in ipairs(queue) do
+		if rec.id == shotID then
+			rec.hit = true
+			break
+		end
+	end
+end
+
+-- 获取指定骨骼在时间窗口内的命中率（自动清理队首超时记录）
+function ENT:GetHitRate(boneIndex, window)
+	if not self.hitStats or not self.hitStats[boneIndex] then
+		return nil
+	end
+	local queue = self.hitStats[boneIndex]
+	local cutoff = CurTime() - window
+	-- 只清理队首的超时记录（FIFO 特性）
+	while #queue > 0 and queue[1].time < cutoff do
+		table.remove(queue, 1)
+	end
+	if #queue == 0 then
+		return nil
+	end
+	local total = 0
+	local hits = 0
+	for _, rec in ipairs(queue) do
+		total = total + 1
+		if rec.hit then
+			hits = hits + 1
+		end
+	end
+	return hits / total
 end

@@ -47,18 +47,17 @@ local function OnEntityFireBullets(entity, data)
 		return
 	end
 
-	local victim = proxy.victim -- 不检查有效性
+	local victim = proxy.victim
 
-	-- Debugger.Print(
-	-- 	string.format(
-	-- 		"[ENP Monitor] Bullet fired from %s (shooter=%s, proxy=%s, victim=%s)",
-	-- 		tostring(entity),
-	-- 		tostring(actualShooter),
-	-- 		tostring(proxy),
-	-- 		tostring(victim)
-	-- 	),
-	-- 	Debugger.LEVEL.TRACE
-	-- )
+	local boneIndex = nil
+	if proxy.validBones and proxy.currentBoneIndex then
+		boneIndex = proxy.validBones[proxy.currentBoneIndex]
+	end
+
+	local shotID = nil
+	if boneIndex then
+		shotID = proxy:RecordShot(boneIndex)
+	end
 
 	local originalCallback = data.Callback
 
@@ -66,11 +65,8 @@ local function OnEntityFireBullets(entity, data)
 		local entityHit = tr.Entity
 		local isVictimHit = IsVictimHit(victim, entityHit)
 
-		-- Debugger.Print(string.format("[ENP Monitor] Hit entity: %s", tostring(entityHit)), Debugger.LEVEL.TRACE)
-		if isVictimHit then
-			Debugger.Print("[ENP Monitor] Hit the victim (or its ragdoll)", Debugger.LEVEL.INFO)
-		else
-			Debugger.Print("[ENP Monitor] Did not hit the victim", Debugger.LEVEL.TRACE)
+		if isVictimHit and boneIndex and shotID then
+			proxy:RecordHit(boneIndex, shotID)
 		end
 
 		hook.Run("ENP_BulletHit", proxy, isVictimHit, tr)
