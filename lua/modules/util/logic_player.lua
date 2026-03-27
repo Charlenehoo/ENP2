@@ -137,6 +137,20 @@ function LogicPlayer:__index(key)
             end
         end
     end
+    -- 当前实体没有该方法，尝试从玩家实体获取
+    local player = rawget(self, "_player")
+    if IsValid(player) then
+        local value = player[key]
+        if value ~= nil then
+            if type(value) == "function" then
+                return function(_, ...)
+                    return value(player, ...)
+                end
+            else
+                return value
+            end
+        end
+    end
     return LogicPlayer[key]
 end
 
