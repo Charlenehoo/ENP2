@@ -75,6 +75,9 @@ local function ProcessCandidates(ply, state)
 		if HasProxy(ply, npc) then
 			continue
 		end
+		if not ply:Alive() then
+			continue
+		end
 
 		-- 达到分帧上限，暂停处理，下次继续
 		if processedInTick >= SCAN_PER_TICK then
