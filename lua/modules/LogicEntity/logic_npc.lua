@@ -10,8 +10,15 @@ function LogicNPC.GetOrCreate(entity)
 	if not IsValid(entity) or not entity:IsNPC() then
 		return nil
 	end
+
 	local logicNPC = npcMap[entity]
-	if not logicNPC then
+	if logicNPC then -- Get
+		local storedNPC = rawget(logicNPC, "_NPC")
+		if not IsValid(storedNPC) then
+			npcMap[entity] = nil
+			logicNPC = nil
+		end
+	else -- Create
 		logicNPC = setmetatable({
 			_NPC = entity,
 			_ragdoll = nil,
@@ -19,6 +26,7 @@ function LogicNPC.GetOrCreate(entity)
 		}, LogicNPC)
 		npcMap[entity] = logicNPC
 	end
+
 	return logicNPC
 end
 

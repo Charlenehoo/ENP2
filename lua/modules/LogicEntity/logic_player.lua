@@ -10,8 +10,15 @@ function LogicPlayer.GetOrCreate(player)
 	if not IsValid(player) or not player:IsPlayer() then
 		return nil
 	end
+
 	local logicPlayer = playerMap[player]
-	if not logicPlayer then
+	if logicPlayer then -- Get
+		local storedPlayer = rawget(logicPlayer, "_player")
+		if not IsValid(storedPlayer) then
+			playerMap[player] = nil
+			logicPlayer = nil
+		end
+	else -- Create
 		logicPlayer = setmetatable({
 			_player = player,
 			_ragdoll = nil,
@@ -19,6 +26,7 @@ function LogicPlayer.GetOrCreate(player)
 		}, LogicPlayer)
 		playerMap[player] = logicPlayer
 	end
+
 	return logicPlayer
 end
 
