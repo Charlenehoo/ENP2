@@ -92,6 +92,12 @@ function LogicPlayer:IsEntityMine(entity)
 		return true
 	end
 
+	local ragdoll = rawget(self, "_ragdoll")
+	if IsValid(ragdoll) and entity == ragdoll then
+		return true
+	end
+
+	-- 后备：通过 GetRagdollOwner 判断（对玩家 ragdoll 有效）
 	if IsValid(entity) and entity:IsRagdoll() then
 		local owner = entity:GetRagdollOwner()
 		return IsValid(owner) and owner == player
