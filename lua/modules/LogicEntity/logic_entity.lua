@@ -31,7 +31,7 @@ function LogicEntity.GetOrCreate(entity)
 	if entity:IsRagdoll() then
 		local owner = entity:GetRagdollOwner()
 		if IsValid(owner) then
-			return LogicEntity.GetOrCreate(owner) -- 修正：原为 Get，现改为 GetOrCreate
+			return LogicEntity.GetOrCreate(owner)
 		end
 	end
 	return nil
