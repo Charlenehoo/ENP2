@@ -39,12 +39,7 @@ local function class(name, base)
                                 args[i] = arg:GetCurrentEntity()
                             end
                         end
-                        local result = value(current, unpack(args))
-                        -- 如果返回值是实体，自动包装为逻辑实例
-                        -- if IsValid(result) then
-                        --     return LogicEntity.GetOrCreate(result)
-                        -- end
-                        return result
+                        return value(current, unpack(args))
                     end
                 else
                     return value
@@ -65,11 +60,7 @@ local function class(name, base)
                                 args[i] = arg:GetCurrentEntity()
                             end
                         end
-                        local result = value(fallback, unpack(args))
-                        -- if IsValid(result) then
-                        --     return LogicEntity.GetOrCreate(result)
-                        -- end
-                        return result
+                        return value(current, unpack(args))
                     end
                 else
                     return value
