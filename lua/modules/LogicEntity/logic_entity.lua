@@ -1,3 +1,4 @@
+-- lua/modules/LogicEntity/logic_entity.lua
 local LogicEntity = {}
 LogicEntity.__index = LogicEntity
 

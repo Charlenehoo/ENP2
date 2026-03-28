@@ -1,5 +1,6 @@
 -- lua\modules\ProxyManager\proxy_manager.lua
 local Debugger = include("modules/util/debugger.lua")
+local LogicEntity = include("modules/LogicEntity/logic_entity.lua")
 
 local ProxyManager = {}
 
@@ -70,6 +71,7 @@ local function _HasExistingProxy(victim, attacker)
 end
 
 local function _CreateProxy(victim, attacker)
+	local logicVictim = 
 	local proxy = ents.Create(PROXY_CLASS)
 	if not IsValid(proxy) then
 		return
