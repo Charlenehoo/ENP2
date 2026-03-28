@@ -1,6 +1,11 @@
 -- lua/modules/LogicEntity/logic_npc.lua
 -- 逻辑 NPC 代理，统一 NPC 与 ragdoll 的访问，支持自动切换（钩子优先）
--- 契约保证：通过 GetOrCreate 返回的对象，其内部引用的原始实体一定有效
+--
+-- 契约保证：
+-- 1. 通过 GetOrCreate 返回的对象，其内部引用的原始 NPC 在创建时一定有效。
+-- 2. GetOriginalEntity 仅在原始 NPC 有效时返回该实体，否则返回 nil。
+-- 3. GetCurrentEntity 仅在当前实体有效时返回该实体，否则返回 nil。
+-- 4. 当 ragdoll 被移除时，通过遍历 npcMap 清理对应的条目，避免无效引用残留。
 
 local LogicEntity = include("modules/LogicEntity/logic_entity.lua")
 local LogicNPC = setmetatable({}, { __index = LogicEntity })
@@ -15,17 +20,14 @@ LogicEntity.RegisterClass("npc", LogicNPC)
 -- ----------------------------------------------------------------------
 
 function LogicNPC.GetOrCreate(entity)
-	-- 输入实体无效或不是 NPC，返回 nil
 	if not IsValid(entity) or not entity:IsNPC() then
 		return nil
 	end
 
 	local logicNPC = npcMap[entity]
 	if logicNPC then
-		-- 检查存储的原始 NPC 是否仍然有效（契约保证）
 		local storedNPC = rawget(logicNPC, "_NPC")
 		if not IsValid(storedNPC) then
-			-- 无效，从映射中移除并重新创建
 			npcMap[entity] = nil
 			logicNPC = nil
 		end
@@ -33,9 +35,9 @@ function LogicNPC.GetOrCreate(entity)
 
 	if not logicNPC then
 		logicNPC = setmetatable({
-			_NPC = entity, -- 原始 NPC 实体
-			_ragdoll = nil, -- 死亡后的 ragdoll（由钩子填充）
-			_current = entity, -- 当前激活实体（NPC 或 ragdoll）
+			_NPC = entity,
+			_ragdoll = nil,
+			_current = entity,
 		}, LogicNPC)
 		npcMap[entity] = logicNPC
 	end
@@ -48,7 +50,11 @@ end
 -- ----------------------------------------------------------------------
 
 function LogicNPC:GetOriginalEntity()
-	return rawget(self, "_NPC")
+	local npc = rawget(self, "_NPC")
+	if IsValid(npc) then
+		return npc
+	end
+	return nil
 end
 
 function LogicNPC:GetCurrentEntity()
@@ -57,13 +63,11 @@ function LogicNPC:GetCurrentEntity()
 		return nil
 	end
 
-	-- 死亡后，如果有 ragdoll 则返回 ragdoll
 	local ragdoll = rawget(self, "_ragdoll")
 	if IsValid(ragdoll) then
 		return ragdoll
 	end
 
-	-- 否则返回 NPC（存活状态）
 	return npc
 end
 
@@ -86,7 +90,7 @@ function LogicNPC:IsEntityMine(entity)
 end
 
 -- ----------------------------------------------------------------------
--- 自动切换钩子（必须监听 CreateEntityRagdoll）
+-- 自动切换钩子
 -- ----------------------------------------------------------------------
 
 local function OnRagdollCreated(owner, ragdoll)
@@ -94,22 +98,27 @@ local function OnRagdollCreated(owner, ragdoll)
 		return
 	end
 
-	-- 确保逻辑实例存在（若不存在则创建）
 	local logicNPC = npcMap[owner]
 	if not logicNPC then
 		logicNPC = LogicNPC.GetOrCreate(owner)
 	end
 
 	if logicNPC then
-		-- 立即存储 ragdoll，防止被 GC
 		rawset(logicNPC, "_ragdoll", ragdoll)
 		rawset(logicNPC, "_current", ragdoll)
 	end
 end
 
 local function OnEntityRemoved(entity)
-	if entity:IsNPC() then
-		npcMap[entity] = nil
+	if not entity:IsRagdoll() then
+		return
+	end
+
+	for npc, logicNPC in pairs(npcMap) do
+		if rawget(logicNPC, "_ragdoll") == entity then
+			npcMap[npc] = nil
+			break
+		end
 	end
 end
 

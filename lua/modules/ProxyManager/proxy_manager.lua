@@ -14,7 +14,12 @@ local function ValidProxies()
 		while i >= 1 do
 			local proxy = _proxies[i]
 			i = i - 1
-			if IsValid(proxy) and IsValid(proxy.attacker) and IsValid(proxy.logicVictim) then
+			if
+				IsValid(proxy)
+				and IsValid(proxy.attacker)
+				and proxy.logicVictim
+				and IsValid(proxy.logicVictim:GetCurrentEntity())
+			then
 				return proxy
 			else
 				if IsValid(proxy) then
