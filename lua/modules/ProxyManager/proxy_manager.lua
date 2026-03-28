@@ -1,6 +1,5 @@
 -- lua\modules\ProxyManager\proxy_manager.lua
 local Debugger = include("modules/util/debugger.lua")
-local LogicEntity = include("modules/LogicEntity/logic_entity.lua")
 
 local ProxyManager = {}
 
@@ -14,7 +13,7 @@ local function ValidProxies()
 		while i >= 1 do
 			local proxy = _proxies[i]
 			i = i - 1
-			if IsValid(proxy) and IsValid(proxy.attacker) and IsValid(proxy.logicVictim:GetCurrentEntity()) then
+			if IsValid(proxy) and IsValid(proxy.attacker) and proxy.logicVictim:IsValid() then
 				return proxy
 			else
 				if IsValid(proxy) then
@@ -55,8 +54,9 @@ local function RequestProxy(victim, attacker)
 		return nil
 	end
 
-	local logicVictim = LogicEntity:GetOrCreate(victim)
+	local logicVictim = LogicEntity.GetOrCreate(victim)
 	if not logicVictim then
+		print("not logicVictim")
 		return nil
 	end
 

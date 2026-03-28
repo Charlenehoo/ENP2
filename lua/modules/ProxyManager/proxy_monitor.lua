@@ -9,13 +9,8 @@ local PROXY_CLASS = ProxyManager.PROXY_CLASS
 --- @return boolean
 local function IsVictimHit(victim, entityHit)
 	-- 直接命中：victim 有效且相等
-	if IsValid(victim) then
-		return entityHit == victim
-	end
-	-- 命中 ragdoll 且 ragdoll 的主人等于 victim（即使 victim 无效也可比较）
-	if IsValid(entityHit) and entityHit:IsRagdoll() then
-		local owner = entityHit:GetRagdollOwner()
-		return owner == victim
+	if logicVictim:IsValid() then
+		return logicVictim:IsEqualTo(entityHit)
 	end
 	return false
 end
@@ -47,7 +42,7 @@ local function OnEntityFireBullets(entity, data)
 		return
 	end
 
-	local victim = proxy.victim
+	local logicVictim = proxy.logicVictim
 
 	local boneIndex = nil
 	if proxy.validBones and proxy.currentBoneIndex then
@@ -63,7 +58,7 @@ local function OnEntityFireBullets(entity, data)
 
 	local function wrappedCallback(shooter, tr, dmgInfo)
 		local entityHit = tr.Entity
-		local isVictimHit = IsVictimHit(victim, entityHit)
+		local isVictimHit = IsVictimHit(logicVictim, entityHit)
 
 		if isVictimHit and boneIndex and shotID then
 			proxy:RecordHit(boneIndex, shotID)

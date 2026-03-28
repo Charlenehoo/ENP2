@@ -8,7 +8,7 @@
 -- 4. 所有公共方法均不会返回无效实体（[NULL Entity]），只返回有效实体、nil 或其它非实体值。
 -- 5. 若原始实体被移除（如玩家断开、NPC 删除），实例不会自动销毁，但后续调用 GetOriginalEntity 或 GetCurrentEntity 将返回 nil。
 -- 6. IsValid() 方法用于快速判断当前逻辑实例是否代表一个有效实体（等价于 IsValid(GetCurrentEntity())）。
-
+local Debugger = include("modules/util/debugger.lua")
 local LogicEntity = {}
 LogicEntity.__index = LogicEntity
 
@@ -31,18 +31,33 @@ end
 -- 契约：返回的实例内部原始实体一定有效（若传入实体无效则返回 nil）
 function LogicEntity.GetOrCreate(entity)
 	if not IsValid(entity) then
+		Debugger.Print("LogicEntity.GetOrCreate nil entity", Debugger.WARN)
 		return nil
 	end
-	local logicClass = classMap[entity:GetClass()]
+	Debugger.Print("LogicEntity.GetOrCreate called", Debugger.TRACE)
+
+	-- 确定用于查找逻辑类的键
+	local typeKey
+	if entity:IsPlayer() then
+		typeKey = "player"
+	elseif entity:IsNPC() then
+		typeKey = "npc"
+	else
+		typeKey = entity:GetClass()
+	end
+
+	local logicClass = classMap[typeKey]
 	if logicClass then
 		return logicClass.GetOrCreate(entity)
 	end
+
 	if entity:IsRagdoll() then
 		local owner = entity:GetRagdollOwner()
 		if IsValid(owner) then
 			return LogicEntity.GetOrCreate(owner)
 		end
 	end
+
 	return nil
 end
 
@@ -141,4 +156,4 @@ end
 -- 返回模块
 -- =============================================================================
 
-return LogicEntity
+_G.LogicEntity = LogicEntity or {}

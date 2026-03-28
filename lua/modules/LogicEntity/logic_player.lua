@@ -7,7 +7,6 @@
 -- 3. GetCurrentEntity 仅在当前实体有效时返回该实体，否则返回 nil。
 -- 4. 所有其他公共方法（如 IsEqualTo）均不会返回无效实体。
 
-local LogicEntity = include("modules/LogicEntity/logic_entity.lua")
 local LogicPlayer = setmetatable({}, { __index = LogicEntity })
 LogicPlayer.__index = LogicPlayer
 
@@ -156,4 +155,4 @@ function LogicPlayer.Init()
 	hook.Add("PlayerDisconnected", "LogicPlayer_PlayerDisconnected", OnPlayerDisconnected)
 end
 
-return LogicPlayer
+_G.LogicPlayer = LogicPlayer or {}

@@ -7,7 +7,6 @@
 -- 3. GetCurrentEntity 仅在当前实体有效时返回该实体，否则返回 nil。
 -- 4. 当 ragdoll 被移除时，通过遍历 npcMap 清理对应的条目，避免无效引用残留。
 
-local LogicEntity = include("modules/LogicEntity/logic_entity.lua")
 local LogicNPC = setmetatable({}, { __index = LogicEntity })
 LogicNPC.__index = LogicNPC
 
@@ -144,4 +143,4 @@ function LogicNPC.Init()
 	hook.Add("EntityRemoved", "LogicNPC_EntityRemoved", OnEntityRemoved)
 end
 
-return LogicNPC
+_G.LogicNPC = LogicNPC or {}
