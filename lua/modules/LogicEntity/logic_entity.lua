@@ -1,249 +1,220 @@
 -- lua/modules/LogicEntity/logic_entity.lua
--- 逻辑实体基类，为玩家、NPC 等提供统一的代理接口
---
--- 契约说明：
--- 1. 通过 GetOrCreate 返回的实例，其内部引用的原始实体在创建时一定有效。
--- 2. 子类必须保证 GetOriginalEntity 仅在原始实体有效时返回该实体，否则返回 nil。
--- 3. 子类必须保证 GetCurrentEntity 仅在当前实体有效时返回该实体，否则返回 nil。
--- 4. 所有公共方法均不会返回无效实体（[NULL Entity]），只返回有效实体、nil 或其它非实体值。
--- 5. 若原始实体被移除（如玩家断开、NPC 删除），实例不会自动销毁，但后续调用 GetOriginalEntity 或 GetCurrentEntity 将返回 nil。
--- 6. IsValid() 方法用于快速判断当前逻辑实例是否代表一个有效实体（等价于 IsValid(GetCurrentEntity())）。
-local Debugger = include("modules/util/debugger.lua")
-local LogicEntity = {}
-LogicEntity.__index = LogicEntity
-
 -- =============================================================================
--- 私有变量
+-- 通用 class 工厂函数
 -- =============================================================================
+local function class(name, base)
+    local cls = {}
+    cls.name = name
+    cls.base = base
 
-local classMap = {}
+    -- 类继承（静态方法）
+    if base then
+        setmetatable(cls, { __index = base })
+    end
 
--- =============================================================================
--- 公开工厂方法
--- =============================================================================
+    -- 实例的 __index 方法：处理方法查找与透明转发
+    cls.__index = function(self, key)
+        -- 1. 优先返回子类自身定义的方法
+        local method = cls[key]
+        if method ~= nil then
+            return method
+        end
 
--- 注册实体类型对应的逻辑类
--- function LogicEntity.RegisterClass(entityClass, logicClass)
--- 	classMap[entityClass] = logicClass
--- end
+        -- 2. 递归查找父类的方法
+        if base then
+            return base.__index(self, key)
+        end
 
-function LogicEntity.RegisterClass(entityClass, logicClass)
-	print("[RegisterClass] called with", entityClass, "classMap before =", classMap)
-	classMap[entityClass] = logicClass
-	print("[RegisterClass] classMap after =", classMap)
-end
+        -- 3. 透明转发：将调用转发给当前实体
+        local current = self:GetCurrentEntity()
+        if current then
+            local value = current[key]
+            if value ~= nil then
+                if type(value) == "function" then
+                    -- 返回一个闭包，自动解包参数中的逻辑实例
+                    return function(_, ...)
+                        local args = { ... }
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "table" and arg.GetCurrentEntity then
+                                args[i] = arg:GetCurrentEntity()
+                            end
+                        end
+                        local result = value(current, unpack(args))
+                        -- 如果返回值是实体，自动包装为逻辑实例
+                        if IsValid(result) then
+                            return LogicEntity.GetOrCreate(result)
+                        end
+                        return result
+                    end
+                else
+                    return value
+                end
+            end
+        end
 
--- 根据任意实体（玩家、NPC、ragdoll）获取对应的逻辑实体实例
--- 契约：返回的实例内部原始实体一定有效（若传入实体无效则返回 nil）
--- 根据任意实体（玩家、NPC、ragdoll）或逻辑实例获取对应的逻辑实体实例
--- function LogicEntity.GetOrCreate(entity)
--- 	-- 如果已经是逻辑实例，直接返回（幂等）
--- 	if type(entity) == "table" and entity.GetCurrentEntity then
--- 		return entity
--- 	end
+        -- 4. 可选备用实体
+        local fallback = self:GetFallbackEntity()
+        if fallback then
+            local value = fallback[key]
+            if value ~= nil then
+                if type(value) == "function" then
+                    return function(_, ...)
+                        local args = { ... }
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "table" and arg.GetCurrentEntity then
+                                args[i] = arg:GetCurrentEntity()
+                            end
+                        end
+                        local result = value(fallback, unpack(args))
+                        if IsValid(result) then
+                            return LogicEntity.GetOrCreate(result)
+                        end
+                        return result
+                    end
+                else
+                    return value
+                end
+            end
+        end
 
--- 	if not IsValid(entity) then
--- 		return nil
--- 	end
+        return nil
+    end
 
--- 	local typeKey
--- 	if entity:IsPlayer() then
--- 		typeKey = "player"
--- 	elseif entity:IsNPC() then
--- 		typeKey = "npc"
--- 	else
--- 		typeKey = entity:GetClass()
--- 	end
+    -- 实例的 __newindex：将赋值转发给当前实体
+    cls.__newindex = function(self, key, value)
+        local current = self:GetCurrentEntity()
+        if current then
+            current[key] = value
+        else
+            error("No valid current entity to write to")
+        end
+    end
 
--- 	local logicClass = classMap[typeKey]
--- 	if logicClass then
--- 		return logicClass.GetOrCreate(entity)
--- 	end
-
--- 	if entity:IsRagdoll() then
--- 		local owner = entity:GetRagdollOwner()
--- 		if IsValid(owner) then
--- 			return LogicEntity.GetOrCreate(owner)
--- 		end
--- 	end
-
--- 	return nil
--- end
-
-function LogicEntity.GetOrCreate(entity)
-	print("[GetOrCreate] called with entity:", entity)
-	if type(entity) == "table" and entity.GetCurrentEntity then
-		print("[GetOrCreate] entity is already a logic instance, returning it")
-		return entity
-	end
-
-	if not IsValid(entity) then
-		print("[GetOrCreate] entity is not valid")
-		return nil
-	end
-
-	local typeKey
-	if entity:IsPlayer() then
-		typeKey = "player"
-	elseif entity:IsNPC() then
-		typeKey = "npc"
-	else
-		typeKey = entity:GetClass()
-	end
-	print("[GetOrCreate] typeKey =", typeKey)
-
-	local logicClass = classMap[typeKey]
-	if logicClass then
-		print("[GetOrCreate] found logicClass for", typeKey, "calling its GetOrCreate")
-		local result = logicClass.GetOrCreate(entity)
-		print("[GetOrCreate] logicClass.GetOrCreate returned", result)
-		return result
-	end
-
-	if entity:IsRagdoll() then
-		local owner = entity:GetRagdollOwner()
-		if IsValid(owner) then
-			print("[GetOrCreate] ragdoll, recursing with owner", owner)
-			return LogicEntity.GetOrCreate(owner)
-		else
-			print("[GetOrCreate] ragdoll has no owner")
-		end
-	end
-
-	print("[GetOrCreate] no logicClass and not ragdoll, returning nil")
-	return nil
+    return cls
 end
 
 -- =============================================================================
+-- LogicEntity 基类
+-- =============================================================================
+local LogicEntity = class("LogicEntity")
+LogicEntity._routers = {} -- 路由表：{ predicate, factory }
+
+--- 注册实体类型
+function LogicEntity.RegisterEntityType(predicate, factory)
+    table.insert(LogicEntity._routers, { predicate = predicate, factory = factory })
+end
+
 -- 抽象方法（子类必须实现）
--- =============================================================================
-
--- 判断给定实体是否属于该逻辑实例
-function LogicEntity:IsEntityMine(entity)
-	error("IsEntityMine must be overridden by subclass")
-end
-
--- 返回原始实体（如玩家、NPC 本身），仅在原始实体有效时返回，否则返回 nil
-function LogicEntity:GetOriginalEntity()
-	error("GetOriginalEntity must be overridden by subclass")
-end
-
--- 返回当前激活的实体（原始实体或其 ragdoll），仅在当前实体有效时返回，否则返回 nil
 function LogicEntity:GetCurrentEntity()
-	error("GetCurrentEntity must be overridden by subclass")
+    error("GetCurrentEntity must be overridden by subclass")
 end
 
--- 返回回退实体（可选，用于弥补当前实体缺失的方法），仅在有效时返回，否则返回 nil
 function LogicEntity:GetFallbackEntity()
-	return nil
+    return nil
 end
 
--- =============================================================================
--- 公开方法
--- =============================================================================
+function LogicEntity:GetOriginalEntity()
+    error("GetOriginalEntity must be overridden by subclass")
+end
 
--- 判断当前逻辑实例是否代表一个有效实体（即 GetCurrentEntity 返回有效实体）
+function LogicEntity:IsEntityMine(entity)
+    error("IsEntityMine must be overridden by subclass")
+end
+
+-- 通用方法
 function LogicEntity:IsValid()
-	return IsValid(self:GetCurrentEntity())
+    return IsValid(self:GetCurrentEntity())
 end
 
--- 判断两个逻辑实体是否代表同一个原始实体，或判断某个实体是否属于当前逻辑实体
 function LogicEntity:IsEqualTo(other)
-	-- 另一个逻辑实体
-	if type(other) == "table" and other.GetOriginalEntity then
-		local selfOriginal = self:GetOriginalEntity()
-		local otherOriginal = other:GetOriginalEntity()
-		return IsValid(selfOriginal) and IsValid(otherOriginal) and selfOriginal == otherOriginal
-	end
-	-- 普通实体
-	if IsValid(other) then
-		return self:IsEntityMine(other)
-	end
-	return false
+    if type(other) == "table" and other.GetCurrentEntity then
+        local selfOrig = self:GetOriginalEntity()
+        local otherOrig = other:GetOriginalEntity()
+        return IsValid(selfOrig) and IsValid(otherOrig) and selfOrig == otherOrig
+    end
+    if IsValid(other) then
+        return self:IsEntityMine(other)
+    end
+    return false
+end
+
+-- 统一工厂方法（幂等）
+function LogicEntity.GetOrCreate(entity)
+    -- 幂等：已经是逻辑实例则直接返回
+    if type(entity) == "table" and entity.GetCurrentEntity then
+        return entity
+    end
+
+    if not IsValid(entity) then
+        return nil
+    end
+
+    -- 遍历路由表，找到第一个匹配的注册项
+    for _, router in ipairs(LogicEntity._routers) do
+        if router.predicate(entity) then
+            return router.factory(entity)
+        end
+    end
+
+    return LogicDummy.GetOrCreate(entity)
 end
 
 -- =============================================================================
--- 元方法（实现透明转发）
+-- LogicDummy 子类（用于其他实体）
 -- =============================================================================
+local LogicDummy = class("LogicDummy", LogicEntity)
 
-function LogicEntity:__index(key)
-	local current = self:GetCurrentEntity()
-	if current then
-		local value = current[key]
-		if value ~= nil then
-			if type(value) == "function" then
-				return function(_, ...)
-					return value(current, ...)
-				end
-			else
-				return value
-			end
-		end
-	end
-	local fallback = self:GetFallbackEntity()
-	if fallback then
-		local value = fallback[key]
-		if value ~= nil then
-			if type(value) == "function" then
-				return function(_, ...)
-					return value(fallback, ...)
-				end
-			else
-				return value
-			end
-		end
-	end
-	return rawget(LogicEntity, key) or rawget(self, key)
+local dummyMap = {}
+
+function LogicDummy.GetOrCreate(entity)
+    if type(entity) == "table" and entity.GetCurrentEntity then
+        return entity
+    end
+    if not IsValid(entity) then
+        return nil
+    end
+
+    local dummy = dummyMap[entity]
+    if dummy then
+        if not IsValid(rawget(dummy, "_entity")) then
+            dummyMap[entity] = nil
+            dummy = nil
+        end
+    end
+
+    if not dummy then
+        dummy = setmetatable({ _entity = entity }, LogicDummy)
+        dummyMap[entity] = dummy
+    end
+    return dummy
 end
 
--- function LogicEntity:__index(key)
--- 	print("[__index] invoked for key =", key)
--- 	local current = self:GetCurrentEntity()
--- 	print("[__index] key =", key, "current =", current)
--- 	if current then
--- 		local value = current[key]
--- 		print("[__index] current value =", value, "type =", type(value))
--- 		if value ~= nil then
--- 			if type(value) == "function" then
--- 				return function(_, ...)
--- 					return value(current, ...)
--- 				end
--- 			else
--- 				return value
--- 			end
--- 		end
--- 	end
--- 	local fallback = self:GetFallbackEntity()
--- 	print("[__index] fallback =", fallback)
--- 	if fallback then
--- 		local value = fallback[key]
--- 		print("[__index] fallback value =", value)
--- 		if value ~= nil then
--- 			if type(value) == "function" then
--- 				return function(_, ...)
--- 					return value(fallback, ...)
--- 				end
--- 			else
--- 				return value
--- 			end
--- 		end
--- 	end
--- 	local ret = rawget(LogicEntity, key) or rawget(self, key)
--- 	print("[__index] final return =", ret)
--- 	return ret
--- end
-
-function LogicEntity:__newindex(key, value)
-	local current = self:GetCurrentEntity()
-	if current then
-		current[key] = value
-	else
-		error("No valid current entity to write to")
-	end
+function LogicDummy:GetCurrentEntity()
+    return rawget(self, "_entity")
 end
 
--- =============================================================================
--- 返回模块
--- =============================================================================
+function LogicDummy:GetFallbackEntity()
+    return nil
+end
 
-_G.LogicEntity = LogicEntity or {}
+function LogicDummy:GetOriginalEntity()
+    return rawget(self, "_entity")
+end
+
+function LogicDummy:IsEntityMine(entity)
+    return entity == rawget(self, "_entity")
+end
+
+-- 可选：清理已删除实体的缓存
+local function onEntityRemoved(entity)
+    if dummyMap[entity] then
+        dummyMap[entity] = nil
+    end
+end
+hook.Add("EntityRemoved", "LogicDummy_Cleanup", onEntityRemoved)
+
+-- =============================================================================
+-- 导出到全局（可选）
+-- =============================================================================
+_G.class = class
+_G.LogicEntity = LogicEntity
