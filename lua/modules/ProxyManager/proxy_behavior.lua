@@ -127,8 +127,12 @@ hook.Add("ENP_ProxyTimeout", "ENP_ProxyBehavior_AdvanceBone", function(proxy)
 	proxy:ResetTimeout()
 
 	local attacker = proxy.attacker
-	local victim = proxy.victim
-	if not IsValid(attacker) or not IsValid(victim) then
+	if not IsValid(attacker) then
+		return
+	end
+
+	local victim = proxy.logicVictim:GetCurrentEntity()
+	if not IsValid(victim) then
 		return
 	end
 
