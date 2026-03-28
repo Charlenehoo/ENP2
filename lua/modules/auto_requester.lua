@@ -44,18 +44,12 @@ end)
 local function ScanForNPCs(logicPlayer, state)
 	local curTime = CurTime()
 	if curTime < state.nextScanTime then
-		return false -- 节流：尚未到达扫描时间
+		return false
 	end
-	-- 更新下次允许扫描的时间
 	state.nextScanTime = curTime + SCAN_INTERVAL
 
+	local nearbyNPCs = ents.FindInSphere(logicPlayer:GetPos(), MAX_DIST)
 	local currentEntity = logicPlayer:GetCurrentEntity()
-
-	print("[auto_requester] logicPlayer.GetPos =", logicPlayer.GetPos)
-	print("[auto_requester] getmetatable(logicPlayer):", getmetatable(logicPlayer))
-	print("[auto_requester] getmetatable(logicPlayer).__index:", getmetatable(logicPlayer).__index)
-
-	local nearbyNPCs = ents.FindInSphere(currentEntity:GetPos(), MAX_DIST)
 	for _, npc in ipairs(nearbyNPCs) do
 		if npc:IsNPC() and npc:Health() > 0 and npc:Disposition(currentEntity) == D_HT then
 			table.insert(state.candidates, npc)
@@ -86,7 +80,7 @@ local function ProcessCandidates(player, state)
 		if HasProxy(logicPlayer, npc) then
 			continue
 		end
-		if not logicPlayer.Alive then
+		if not logicPlayer.Alive() then
 			continue
 		end
 
