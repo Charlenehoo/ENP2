@@ -37,7 +37,6 @@ function LogicPlayer.GetOrCreate(player)
 		logicPlayer = setmetatable({
 			_player = player,
 			_ragdoll = nil,
-			_current = player,
 		}, LogicPlayer)
 		playerMap[player] = logicPlayer
 	end
@@ -126,7 +125,6 @@ local function OnRagdollCreated(owner, ragdoll)
 
 	if logicPlayer then
 		rawset(logicPlayer, "_ragdoll", ragdoll)
-		rawset(logicPlayer, "_current", ragdoll)
 	end
 end
 
@@ -134,7 +132,6 @@ local function OnPlayerSpawn(player)
 	local logicPlayer = playerMap[player]
 	if logicPlayer then
 		rawset(logicPlayer, "_ragdoll", nil)
-		rawset(logicPlayer, "_current", player)
 	end
 end
 

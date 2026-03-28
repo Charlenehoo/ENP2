@@ -37,7 +37,6 @@ function LogicNPC.GetOrCreate(entity)
 		logicNPC = setmetatable({
 			_NPC = entity,
 			_ragdoll = nil,
-			_current = entity,
 		}, LogicNPC)
 		npcMap[entity] = logicNPC
 	end
@@ -58,14 +57,14 @@ function LogicNPC:GetOriginalEntity()
 end
 
 function LogicNPC:GetCurrentEntity()
-	local npc = rawget(self, "_NPC")
-	if not IsValid(npc) then
-		return nil
-	end
-
 	local ragdoll = rawget(self, "_ragdoll")
 	if IsValid(ragdoll) then
 		return ragdoll
+	end
+
+	local npc = rawget(self, "_NPC")
+	if not IsValid(npc) then
+		return nil
 	end
 
 	return npc
@@ -105,19 +104,27 @@ local function OnRagdollCreated(owner, ragdoll)
 
 	if logicNPC then
 		rawset(logicNPC, "_ragdoll", ragdoll)
-		rawset(logicNPC, "_current", ragdoll)
 	end
 end
 
 local function OnEntityRemoved(entity)
-	if not entity:IsRagdoll() then
+	if not IsValid(entity) then
 		return
 	end
-
-	for npc, logicNPC in pairs(npcMap) do
-		if rawget(logicNPC, "_ragdoll") == entity then
-			npcMap[npc] = nil
-			break
+	if entity:IsRagdoll() then
+		-- 原有 ragdoll 清理逻辑
+		for npc, logicNPC in pairs(npcMap) do
+			if rawget(logicNPC, "_ragdoll") == entity then
+				rawset(logicNPC, "_ragdoll", nil)
+				npcMap[npc] = nil
+				break
+			end
+		end
+	elseif entity:IsNPC() then
+		-- NPC 实体被移除时，若对应逻辑实例无 ragdoll，则清理映射
+		local logicNPC = npcMap[entity]
+		if logicNPC and not IsValid(rawget(logicNPC, "_ragdoll")) then
+			npcMap[entity] = nil
 		end
 	end
 end
