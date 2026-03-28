@@ -7,6 +7,7 @@
 -- 3. 子类必须保证 GetCurrentEntity 仅在当前实体有效时返回该实体，否则返回 nil。
 -- 4. 所有公共方法均不会返回无效实体（[NULL Entity]），只返回有效实体、nil 或其它非实体值。
 -- 5. 若原始实体被移除（如玩家断开、NPC 删除），实例不会自动销毁，但后续调用 GetOriginalEntity 或 GetCurrentEntity 将返回 nil。
+-- 6. IsValid() 方法用于快速判断当前逻辑实例是否代表一个有效实体（等价于 IsValid(GetCurrentEntity())）。
 
 local LogicEntity = {}
 LogicEntity.__index = LogicEntity
@@ -72,6 +73,11 @@ end
 -- =============================================================================
 -- 公开方法
 -- =============================================================================
+
+-- 判断当前逻辑实例是否代表一个有效实体（即 GetCurrentEntity 返回有效实体）
+function LogicEntity:IsValid()
+	return IsValid(self:GetCurrentEntity())
+end
 
 -- 判断两个逻辑实体是否代表同一个原始实体，或判断某个实体是否属于当前逻辑实体
 function LogicEntity:IsEqualTo(other)
