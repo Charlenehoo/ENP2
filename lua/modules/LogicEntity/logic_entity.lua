@@ -7,7 +7,7 @@ function LogicEntity.RegisterClass(entityClass, logicClass)
 	classMap[entityClass] = logicClass
 end
 
-function LogicEntity.Get(entity)
+function LogicEntity.GetOrCreate(entity)
 	if not IsValid(entity) then
 		return nil
 	end
