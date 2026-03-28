@@ -136,6 +136,13 @@ local function OnPlayerSpawn(player)
 end
 
 local function OnPlayerDisconnected(player)
+	-- 当前实现：直接删除 playerMap 条目。
+	-- 潜在问题：若玩家断开时仍有 ragdoll 存在且被外部引用，该 ragdoll 移除时无法找到对应逻辑实例来清空 _ragdoll，
+	-- 可能导致实例中 _ragdoll 残存无效引用（但玩家断开后通常进程退出或地图切换，实际影响很小）。
+	-- 改进方向（如需支持长期运行的多人生存模式）：
+	--   1. 不删除条目，仅清空 _player，并添加 EntityRemoved 钩子处理 ragdoll 清理。
+	--   2. 在 EntityRemoved 中遍历 playerMap，若 ragdoll 匹配则清空 _ragdoll，当 _player 和 _ragdoll 均无效时再删除条目。
+	--   3. 可通过 game.SinglePlayer() 判断是否启用完整清理，避免单机下不必要的开销。
 	playerMap[player] = nil
 end
 

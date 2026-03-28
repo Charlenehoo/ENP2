@@ -51,3 +51,14 @@ local function TestNPCRagdollOwner()
 end
 
 TestNPCRagdollOwner()
+
+-- ] lua_openscript tests\test_npc_ragdoll_owner.lua
+-- Running script tests\test_npc_ragdoll_owner.lua...
+-- NPC created:	NPC [83][npc_combine_s]
+-- Killing NPC with TakeDamage...
+-- CreateEntityRagdoll triggered!
+--   owner:	NPC [83][npc_combine_s]
+--   ragdoll:	Entity [152][prop_ragdoll]
+--   ragdoll:GetRagdollOwner() =	[NULL Entity]
+--   IsValid(ragdoll:GetRagdollOwner()) =	false
+-- After 0.5s, ragdoll still valid, owner =	[NULL Entity]

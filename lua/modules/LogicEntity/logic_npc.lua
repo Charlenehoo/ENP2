@@ -111,20 +111,26 @@ local function OnEntityRemoved(entity)
 	if not IsValid(entity) then
 		return
 	end
+
 	if entity:IsRagdoll() then
-		-- 原有 ragdoll 清理逻辑
 		for npc, logicNPC in pairs(npcMap) do
 			if rawget(logicNPC, "_ragdoll") == entity then
 				rawset(logicNPC, "_ragdoll", nil)
-				npcMap[npc] = nil
+				-- 只有当原始 NPC 也已无效时，才删除 map 条目
+				if not IsValid(rawget(logicNPC, "_NPC")) then
+					npcMap[npc] = nil
+				end
 				break
 			end
 		end
 	elseif entity:IsNPC() then
-		-- NPC 实体被移除时，若对应逻辑实例无 ragdoll，则清理映射
 		local logicNPC = npcMap[entity]
-		if logicNPC and not IsValid(rawget(logicNPC, "_ragdoll")) then
-			npcMap[entity] = nil
+		if logicNPC then
+			rawset(logicNPC, "_NPC", nil)
+			-- 只有当 ragdoll 也已无效时，才删除 map 条目
+			if not IsValid(rawget(logicNPC, "_ragdoll")) then
+				npcMap[entity] = nil
+			end
 		end
 	end
 end
