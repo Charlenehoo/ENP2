@@ -81,7 +81,7 @@ local function _CreateProxy(victim, attacker)
 
 	local proxy = ents.Create(PROXY_CLASS)
 	if not IsValid(proxy) then
-		return
+		return nil
 	end
 	proxy:Spawn()
 	proxy:Init(logicVictim, attacker)
