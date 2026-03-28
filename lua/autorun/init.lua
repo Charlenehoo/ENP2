@@ -10,7 +10,4 @@ if SERVER then
 
 	include("modules/auto_requester.lua")
 	-- include("modules/bone_manager.lua")
-
-	LogicPlayer.Init() -- register hooks
-	LogicNPC.Init() -- register hooks
 end
