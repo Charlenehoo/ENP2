@@ -61,16 +61,16 @@ local function RequestProxy(victim, attacker)
 	end
 
 	local logicVictim = LogicEntity:GetOrCreate(victim)
-	if not IsValid(logicVictim) or logicVictim:GetClass() == PROXY_CLASS then
+	if not logicVictim then
 		return nil
 	end
 
 	-- 以下为 logicVictim
-	if attacker == logicVictim then
+	if logicVictim:IsEqualTo(attacker) then
 		return nil
 	end
 
-	if _HasExistingProxy(viclogicVictimtim, attacker) then
+	if _HasExistingProxy(logicVictim, attacker) then
 		return nil
 	end
 
