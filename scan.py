@@ -4,21 +4,28 @@ import sys
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <extension>")
-        print("Example: python script.py lua")
+    # 检查参数数量
+    if len(sys.argv) < 3:
+        print("Usage: python script.py <base_dir> <extension>")
+        print("Example: python script.py /path/to/project lua")
         sys.exit(1)
 
-    ext = sys.argv[1].strip().lower()
+    base_dir = os.path.abspath(sys.argv[1].strip())
+    ext = sys.argv[2].strip().lower()
+
+    # 验证目录是否存在
+    if not os.path.isdir(base_dir):
+        print(f"Error: Directory '{base_dir}' does not exist or is not a directory")
+        sys.exit(1)
+
+    # 处理扩展名（移除开头的点并转为小写）
+    if ext.startswith("."):
+        ext = ext[1:]
+
     if not ext:
         print("Error: Extension cannot be empty")
         sys.exit(1)
 
-    # 确保扩展名不带点（如用户输入 .lua 会自动处理）
-    if ext.startswith("."):
-        ext = ext[1:]
-
-    base_dir = os.getcwd()
     print(f"Scanning for .{ext} files in {base_dir}...\n")
 
     # 遍历所有文件
@@ -38,9 +45,15 @@ def main():
                 # 读取并打印文件内容
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
-                        print(f.read(), end="")
+                        # 确保内容结尾有换行符
+                        content = f.read()
+                        if not content.endswith("\n"):
+                            content += "\n"
+                        print(content, end="")
                 except Exception as e:
                     print(f"ERROR: Failed to read file - {str(e)}")
+                    print("```\n")  # 确保错误后仍有代码块结束
+                    continue
 
                 print("```\n")  # 结束代码块并添加空行
 
