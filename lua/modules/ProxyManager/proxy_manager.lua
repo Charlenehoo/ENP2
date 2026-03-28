@@ -71,13 +71,20 @@ local function _HasExistingProxy(victim, attacker)
 end
 
 local function _CreateProxy(victim, attacker)
-	local logicVictim = 
+	if not IsValid(attacker) or not attacker:IsNPC then return nil end
+	local logicVictim = LogicEntity:GetOrCreate(victim)
+	if not IsValid(logicVictim) then
+		return nil
+	end
+
+	if attacker == logicVictim then return nil end
+
 	local proxy = ents.Create(PROXY_CLASS)
 	if not IsValid(proxy) then
 		return
 	end
 	proxy:Spawn()
-	proxy:Init(victim, attacker)
+	proxy:Init(logicVictim, attacker)
 	return proxy
 end
 
