@@ -34,16 +34,16 @@ local function class(name, base)
                     -- 返回一个闭包，自动解包参数中的逻辑实例
                     return function(_, ...)
                         local args = { ... }
-                        for i, arg in ipairs(args) do
-                            if type(arg) == "table" and arg.GetCurrentEntity then
-                                args[i] = arg:GetCurrentEntity()
-                            end
-                        end
+                        -- for i, arg in ipairs(args) do
+                        --     if type(arg) == "table" and arg.GetCurrentEntity then
+                        --         args[i] = arg:GetCurrentEntity()
+                        --     end
+                        -- end
                         local result = value(current, unpack(args))
                         -- 如果返回值是实体，自动包装为逻辑实例
-                        if IsValid(result) then
-                            return LogicEntity.GetOrCreate(result)
-                        end
+                        -- if IsValid(result) then
+                        --     return LogicEntity.GetOrCreate(result)
+                        -- end
                         return result
                     end
                 else

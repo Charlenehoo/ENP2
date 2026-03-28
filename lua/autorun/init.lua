@@ -9,5 +9,4 @@ if SERVER then
 	include("modules/ProxyManager/proxy_monitor.lua")
 
 	include("modules/auto_requester.lua")
-	-- include("modules/bone_manager.lua")
 end
