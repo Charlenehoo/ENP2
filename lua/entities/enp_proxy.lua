@@ -15,8 +15,8 @@ function ENT:Initialize() -- https://wiki.facepunch.com/gmod/ENTITY:Initialize
 	self:SetCollisionGroup(COLLISION_GROUP_NONE)
 end
 
-function ENT:Init(victim, attacker)
-	self.victim = victim
+function ENT:Init(logicVictim, attacker)
+	self.logicVictim = logicVictim
 	self.attacker = attacker
 
 	self:InitHitStats()
@@ -32,57 +32,18 @@ function ENT:Init(victim, attacker)
 	attacker:UpdateEnemyMemory(self, InitPos)
 end
 
--- 获取当前选中的骨骼位置（不自动前进）
-function ENT:GetNextBonePos()
-	local victim = self.victim
-	if not IsValid(victim) then
-		return vector_origin
+function ENT:InitHitStats()
+	if not self.hitStats then
+		self.hitStats = {}
 	end
-
-	-- 如果 victim 发生变化，清空缓存并重建
-	if self.lastVictim ~= victim then
-		self.validBones = nil
-		self.currentBoneIndex = 0
-		self.lastVictim = victim
+	if not self.nextShotID then
+		self.nextShotID = 1
 	end
-
-	-- 构建有效骨骼索引列表（仅首次或 victim 变化时）
-	if not self.validBones then
-		self.validBones = {}
-		local rootPos = victim:GetPos()
-		local boneCount = victim:GetBoneCount()
-		for i = 0, boneCount - 1 do
-			local bonePos, _ = victim:GetBonePosition(i)
-			local v = bonePos - rootPos
-			if v:LengthSqr() > EPS then
-				table.insert(self.validBones, i)
-			end
-		end
-		self.currentBoneIndex = 0
-	end
-
-	-- 无有效骨骼时回退到 EyePos
-	if #self.validBones == 0 then
-		return victim:EyePos()
-	end
-
-	-- 首次调用时，自动选中第一个骨骼
-	if self.currentBoneIndex == 0 then
-		self.currentBoneIndex = 1
-	end
-
-	local boneIndex = self.validBones[self.currentBoneIndex]
-	local bonePos, _ = victim:GetBonePosition(boneIndex)
-	return bonePos
 end
 
--- 超时时前进到下一个骨骼
-function ENT:AdvanceToNextBone()
-	if not self.validBones or #self.validBones == 0 then
-		return
-	end
-	-- 循环递增索引
-	self.currentBoneIndex = (self.currentBoneIndex % #self.validBones) + 1
+function ENT:ResetTimeout()
+	self.lastHitTime = CurTime()
+	self.timeoutTriggered = false
 end
 
 -- 计算理想位置（基于当前骨骼）
@@ -93,9 +54,53 @@ function ENT:GetIdealPos()
 	return self.attacker:GetShootPos() + direction * MIN_OFFSET
 end
 
-function ENT:ResetTimeout()
-	self.lastHitTime = CurTime()
-	self.timeoutTriggered = false
+-- 获取当前选中的骨骼位置（不自动前进）
+function ENT:GetNextBonePos()
+	local logicVictim = self.logicVictim
+
+	if self.lastLogicVictimModel ~= self.logicVictim:GetModel() then
+		self.validBones = nil
+		self.currentBoneIndex = 0
+		self.lastLogicVictimModel = self.logicVictim:GetModel()
+	end
+
+	-- 构建有效骨骼索引列表（仅首次或模型变化时）
+	if not self.validBones then
+		self.validBones = {}
+		local rootPos = logicVictim:GetPos()
+		local boneCount = logicVictim:GetBoneCount()
+		for i = 0, boneCount - 1 do
+			local bonePos, _ = logicVictim:GetBonePosition(i)
+			local v = bonePos - rootPos
+			if v:LengthSqr() > EPS then
+				table.insert(self.validBones, i)
+			end
+		end
+		self.currentBoneIndex = 0
+	end
+
+	-- 无有效骨骼时回退到 EyePos
+	if #self.validBones == 0 then
+		return logicVictim:EyePos()
+	end
+
+	-- 首次调用时，自动选中第一个骨骼
+	if self.currentBoneIndex == 0 then
+		self.currentBoneIndex = 1
+	end
+
+	local boneIndex = self.validBones[self.currentBoneIndex]
+	local bonePos, _ = logicVictim:GetBonePosition(boneIndex)
+	return bonePos
+end
+
+-- 超时时前进到下一个骨骼
+function ENT:AdvanceToNextBone()
+	if not self.validBones or #self.validBones == 0 then
+		return
+	end
+	-- 循环递增索引
+	self.currentBoneIndex = (self.currentBoneIndex % #self.validBones) + 1
 end
 
 function ENT:CheckTimeout(timeoutSeconds)
@@ -110,15 +115,6 @@ function ENT:CheckTimeout(timeoutSeconds)
 		return true
 	end
 	return false
-end
-
-function ENT:InitHitStats()
-	if not self.hitStats then
-		self.hitStats = {}
-	end
-	if not self.nextShotID then
-		self.nextShotID = 1
-	end
 end
 
 -- 记录一次射击，返回一个唯一 ID
