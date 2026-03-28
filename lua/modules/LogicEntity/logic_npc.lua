@@ -2,7 +2,7 @@ local LogicEntity = include("modules/LogicEntity/logic_entity.lua")
 local LogicNPC = setmetatable({}, { __index = LogicEntity })
 LogicNPC.__index = LogicNPC
 
-local nonPlayerCharacterMap = {}
+local npcMap = {}
 
 LogicEntity.RegisterClass("npc", LogicNPC)
 
@@ -10,40 +10,40 @@ function LogicNPC.GetOrCreate(entity)
 	if not IsValid(entity) or not entity:IsNPC() then
 		return nil
 	end
-	local logicNonPlayerCharacter = nonPlayerCharacterMap[entity]
-	if not logicNonPlayerCharacter then
-		logicNonPlayerCharacter = setmetatable({
-			_nonPlayerCharacter = entity,
+	local logicNPC = npcMap[entity]
+	if not logicNPC then
+		logicNPC = setmetatable({
+			_NPC = entity,
 			_ragdoll = nil,
 			_current = entity,
 		}, LogicNPC)
-		nonPlayerCharacterMap[entity] = logicNonPlayerCharacter
+		npcMap[entity] = logicNPC
 	end
-	return logicNonPlayerCharacter
+	return logicNPC
 end
 
 function LogicNPC:GetOriginalEntity()
-	return rawget(self, "_nonPlayerCharacter")
+	return rawget(self, "_NPC")
 end
 
 function LogicNPC:GetCurrentEntity()
-	local nonPlayerCharacter = rawget(self, "_nonPlayerCharacter")
-	if not IsValid(nonPlayerCharacter) then
+	local NPC = rawget(self, "_NPC")
+	if not IsValid(NPC) then
 		return nil
 	end
 	local ragdoll = rawget(self, "_ragdoll")
 	if IsValid(ragdoll) then
 		return ragdoll
 	end
-	return nonPlayerCharacter
+	return NPC
 end
 
 function LogicNPC:IsEntityMine(entity)
-	local nonPlayerCharacter = rawget(self, "_nonPlayerCharacter")
-	if not IsValid(nonPlayerCharacter) then
+	local NPC = rawget(self, "_NPC")
+	if not IsValid(NPC) then
 		return false
 	end
-	if entity == nonPlayerCharacter then
+	if entity == NPC then
 		return true
 	end
 	local ragdoll = rawget(self, "_ragdoll")
@@ -57,19 +57,19 @@ local function onRagdollCreated(owner, ragdoll)
 	if not IsValid(owner) or not owner:IsNPC() then
 		return
 	end
-	local logicNonPlayerCharacter = nonPlayerCharacterMap[owner]
-	if not logicNonPlayerCharacter then
-		logicNonPlayerCharacter = LogicNPC.GetOrCreate(owner)
+	local logicNPC = npcMap[owner]
+	if not logicNPC then
+		logicNPC = LogicNPC.GetOrCreate(owner)
 	end
-	if logicNonPlayerCharacter then
-		rawset(logicNonPlayerCharacter, "_ragdoll", ragdoll)
-		rawset(logicNonPlayerCharacter, "_current", ragdoll)
+	if logicNPC then
+		rawset(logicNPC, "_ragdoll", ragdoll)
+		rawset(logicNPC, "_current", ragdoll)
 	end
 end
 
 local function onEntityRemoved(entity)
 	if entity:IsNPC() then
-		nonPlayerCharacterMap[entity] = nil
+		npcMap[entity] = nil
 	end
 end
 
