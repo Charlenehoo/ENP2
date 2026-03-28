@@ -53,7 +53,7 @@ function LogicNPC:IsEntityMine(entity)
 	return false
 end
 
-local function onRagdollCreated(owner, ragdoll)
+local function OnRagdollCreated(owner, ragdoll)
 	if not IsValid(owner) or not owner:IsNPC() then
 		return
 	end
@@ -67,15 +67,15 @@ local function onRagdollCreated(owner, ragdoll)
 	end
 end
 
-local function onEntityRemoved(entity)
+local function OnEntityRemoved(entity)
 	if entity:IsNPC() then
 		npcMap[entity] = nil
 	end
 end
 
 function LogicNPC.Init()
-	hook.Add("CreateEntityRagdoll", "LogicNPC_RagdollCreated", onRagdollCreated)
-	hook.Add("EntityRemoved", "LogicNPC_EntityRemoved", onEntityRemoved)
+	hook.Add("CreateEntityRagdoll", "LogicNPC_RagdollCreated", OnRagdollCreated)
+	hook.Add("EntityRemoved", "LogicNPC_EntityRemoved", OnEntityRemoved)
 end
 
 return LogicNPC

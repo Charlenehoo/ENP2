@@ -65,7 +65,7 @@ function LogicPlayer:GetFallbackEntity()
 	return rawget(self, "_player")
 end
 
-local function onRagdollCreated(owner, ragdoll)
+local function OnRagdollCreated(owner, ragdoll)
 	if not IsValid(owner) or not owner:IsPlayer() then
 		return
 	end
@@ -76,7 +76,7 @@ local function onRagdollCreated(owner, ragdoll)
 	end
 end
 
-local function onPlayerSpawn(player)
+local function OnPlayerSpawn(player)
 	local logicPlayer = playerMap[player]
 	if logicPlayer then
 		rawset(logicPlayer, "_ragdoll", nil)
@@ -84,14 +84,14 @@ local function onPlayerSpawn(player)
 	end
 end
 
-local function onPlayerDisconnected(player)
+local function OnPlayerDisconnected(player)
 	playerMap[player] = nil
 end
 
 function LogicPlayer.Init()
-	hook.Add("CreateEntityRagdoll", "LogicPlayer_RagdollCreated", onRagdollCreated)
-	hook.Add("PlayerSpawn", "LogicPlayer_PlayerSpawn", onPlayerSpawn)
-	hook.Add("PlayerDisconnected", "LogicPlayer_PlayerDisconnected", onPlayerDisconnected)
+	hook.Add("CreateEntityRagdoll", "LogicPlayer_RagdollCreated", OnRagdollCreated)
+	hook.Add("PlayerSpawn", "LogicPlayer_PlayerSpawn", OnPlayerSpawn)
+	hook.Add("PlayerDisconnected", "LogicPlayer_PlayerDisconnected", OnPlayerDisconnected)
 end
 
 return LogicPlayer
