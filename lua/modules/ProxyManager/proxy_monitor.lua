@@ -4,10 +4,10 @@ local Debugger = include("modules/util/debugger.lua")
 local PROXY_CLASS = ProxyManager.PROXY_CLASS
 
 --- 判断被击中实体是否应视为命中 victim
---- @param victim Entity  目标实体（可能是玩家或 ragdoll）
+--- @param logicVictim  Entity  目标实体（可能是玩家或 ragdoll）
 --- @param entityHit Entity  被击中的实体
 --- @return boolean
-local function IsVictimHit(victim, entityHit)
+local function IsVictimHit(logicVictim, entityHit)
 	-- 直接命中：victim 有效且相等
 	if logicVictim:IsValid() then
 		return logicVictim:IsEqualTo(entityHit)

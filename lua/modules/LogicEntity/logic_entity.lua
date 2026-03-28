@@ -23,20 +23,65 @@ local classMap = {}
 -- =============================================================================
 
 -- 注册实体类型对应的逻辑类
+-- function LogicEntity.RegisterClass(entityClass, logicClass)
+-- 	classMap[entityClass] = logicClass
+-- end
+
 function LogicEntity.RegisterClass(entityClass, logicClass)
+	print("[RegisterClass] called with", entityClass, "classMap before =", classMap)
 	classMap[entityClass] = logicClass
+	print("[RegisterClass] classMap after =", classMap)
 end
 
 -- 根据任意实体（玩家、NPC、ragdoll）获取对应的逻辑实体实例
 -- 契约：返回的实例内部原始实体一定有效（若传入实体无效则返回 nil）
+-- 根据任意实体（玩家、NPC、ragdoll）或逻辑实例获取对应的逻辑实体实例
+-- function LogicEntity.GetOrCreate(entity)
+-- 	-- 如果已经是逻辑实例，直接返回（幂等）
+-- 	if type(entity) == "table" and entity.GetCurrentEntity then
+-- 		return entity
+-- 	end
+
+-- 	if not IsValid(entity) then
+-- 		return nil
+-- 	end
+
+-- 	local typeKey
+-- 	if entity:IsPlayer() then
+-- 		typeKey = "player"
+-- 	elseif entity:IsNPC() then
+-- 		typeKey = "npc"
+-- 	else
+-- 		typeKey = entity:GetClass()
+-- 	end
+
+-- 	local logicClass = classMap[typeKey]
+-- 	if logicClass then
+-- 		return logicClass.GetOrCreate(entity)
+-- 	end
+
+-- 	if entity:IsRagdoll() then
+-- 		local owner = entity:GetRagdollOwner()
+-- 		if IsValid(owner) then
+-- 			return LogicEntity.GetOrCreate(owner)
+-- 		end
+-- 	end
+
+-- 	return nil
+-- end
+
 function LogicEntity.GetOrCreate(entity)
+	print("[GetOrCreate] called with entity:", entity)
+	if type(entity) == "table" and entity.GetCurrentEntity then
+		print("[GetOrCreate] entity is already a logic instance, returning it")
+		return entity
+	end
+
 	if not IsValid(entity) then
-		Debugger.Print("LogicEntity.GetOrCreate nil entity", Debugger.WARN)
+		print("[GetOrCreate] entity is not valid")
 		return nil
 	end
-	Debugger.Print("LogicEntity.GetOrCreate called", Debugger.TRACE)
 
-	-- 确定用于查找逻辑类的键
 	local typeKey
 	if entity:IsPlayer() then
 		typeKey = "player"
@@ -45,19 +90,27 @@ function LogicEntity.GetOrCreate(entity)
 	else
 		typeKey = entity:GetClass()
 	end
+	print("[GetOrCreate] typeKey =", typeKey)
 
 	local logicClass = classMap[typeKey]
 	if logicClass then
-		return logicClass.GetOrCreate(entity)
+		print("[GetOrCreate] found logicClass for", typeKey, "calling its GetOrCreate")
+		local result = logicClass.GetOrCreate(entity)
+		print("[GetOrCreate] logicClass.GetOrCreate returned", result)
+		return result
 	end
 
 	if entity:IsRagdoll() then
 		local owner = entity:GetRagdollOwner()
 		if IsValid(owner) then
+			print("[GetOrCreate] ragdoll, recursing with owner", owner)
 			return LogicEntity.GetOrCreate(owner)
+		else
+			print("[GetOrCreate] ragdoll has no owner")
 		end
 	end
 
+	print("[GetOrCreate] no logicClass and not ragdoll, returning nil")
 	return nil
 end
 
@@ -142,6 +195,43 @@ function LogicEntity:__index(key)
 	end
 	return rawget(LogicEntity, key) or rawget(self, key)
 end
+
+-- function LogicEntity:__index(key)
+-- 	print("[__index] invoked for key =", key)
+-- 	local current = self:GetCurrentEntity()
+-- 	print("[__index] key =", key, "current =", current)
+-- 	if current then
+-- 		local value = current[key]
+-- 		print("[__index] current value =", value, "type =", type(value))
+-- 		if value ~= nil then
+-- 			if type(value) == "function" then
+-- 				return function(_, ...)
+-- 					return value(current, ...)
+-- 				end
+-- 			else
+-- 				return value
+-- 			end
+-- 		end
+-- 	end
+-- 	local fallback = self:GetFallbackEntity()
+-- 	print("[__index] fallback =", fallback)
+-- 	if fallback then
+-- 		local value = fallback[key]
+-- 		print("[__index] fallback value =", value)
+-- 		if value ~= nil then
+-- 			if type(value) == "function" then
+-- 				return function(_, ...)
+-- 					return value(fallback, ...)
+-- 				end
+-- 			else
+-- 				return value
+-- 			end
+-- 		end
+-- 	end
+-- 	local ret = rawget(LogicEntity, key) or rawget(self, key)
+-- 	print("[__index] final return =", ret)
+-- 	return ret
+-- end
 
 function LogicEntity:__newindex(key, value)
 	local current = self:GetCurrentEntity()

@@ -56,7 +56,6 @@ local function RequestProxy(victim, attacker)
 
 	local logicVictim = LogicEntity.GetOrCreate(victim)
 	if not logicVictim then
-		print("not logicVictim")
 		return nil
 	end
 

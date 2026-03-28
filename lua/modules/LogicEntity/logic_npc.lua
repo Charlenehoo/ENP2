@@ -8,7 +8,15 @@
 -- 4. 当 ragdoll 被移除时，通过遍历 npcMap 清理对应的条目，避免无效引用残留。
 
 local LogicNPC = setmetatable({}, { __index = LogicEntity })
-LogicNPC.__index = LogicNPC
+LogicNPC.__index = function(self, key)
+	-- 1. 优先查找子类表中定义的方法（如 GetCurrentEntity）
+	local method = LogicNPC[key]
+	if method ~= nil then
+		return method
+	end
+	-- 2. 否则转发到基类的 __index 函数
+	return LogicEntity.__index(self, key)
+end
 
 local npcMap = {}
 

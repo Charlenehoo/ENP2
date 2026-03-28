@@ -8,7 +8,15 @@
 -- 4. 所有其他公共方法（如 IsEqualTo）均不会返回无效实体。
 
 local LogicPlayer = setmetatable({}, { __index = LogicEntity })
-LogicPlayer.__index = LogicPlayer
+LogicPlayer.__index = function(self, key)
+	-- 1. 优先查找子类表中定义的方法（如 GetCurrentEntity）
+	local method = LogicPlayer[key]
+	if method ~= nil then
+		return method
+	end
+	-- 2. 否则转发到基类的 __index 函数
+	return LogicEntity.__index(self, key)
+end
 
 local playerMap = {}
 

@@ -12,7 +12,7 @@ local playerStates = {}
 -- 检查是否已存在代理（简单遍历，创建频率低）
 local function HasProxy(logicPlayer, npc)
 	for proxy in ProxyManager.ValidProxies() do
-		if proxy.attacker == npc and proxy.logicPlayer:IsEqualTo(logicPlayer) then
+		if proxy.attacker == npc and proxy.logicVictim:IsEqualTo(logicPlayer) then
 			return true
 		end
 	end
@@ -50,6 +50,11 @@ local function ScanForNPCs(logicPlayer, state)
 	state.nextScanTime = curTime + SCAN_INTERVAL
 
 	local currentEntity = logicPlayer:GetCurrentEntity()
+
+	print("[auto_requester] logicPlayer.GetPos =", logicPlayer.GetPos)
+	print("[auto_requester] getmetatable(logicPlayer):", getmetatable(logicPlayer))
+	print("[auto_requester] getmetatable(logicPlayer).__index:", getmetatable(logicPlayer).__index)
+
 	local nearbyNPCs = ents.FindInSphere(currentEntity:GetPos(), MAX_DIST)
 	for _, npc in ipairs(nearbyNPCs) do
 		if npc:IsNPC() and npc:Health() > 0 and npc:Disposition(currentEntity) == D_HT then
@@ -81,7 +86,7 @@ local function ProcessCandidates(player, state)
 		if HasProxy(logicPlayer, npc) then
 			continue
 		end
-		if not logicPlayer:Alive() then
+		if not logicPlayer.Alive then
 			continue
 		end
 
