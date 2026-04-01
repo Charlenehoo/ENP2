@@ -18,36 +18,38 @@ end
 --- @param entity Entity  发射子弹的实体（可能是武器或 NPC）
 --- @param data Bullet    子弹数据
 local function OnEntityFireBullets(entity, data)
-    local actualShooter = entity
-    if IsValid(actualShooter) and actualShooter:IsWeapon() then
-        actualShooter = actualShooter:GetOwner()
-    end
-    if not IsValid(actualShooter) or not actualShooter:IsNPC() then
-        return
-    end
+	local actualShooter = entity
+	if IsValid(actualShooter) and actualShooter:IsWeapon() then
+		actualShooter = actualShooter:GetOwner()
+	end
+	if not IsValid(actualShooter) or not actualShooter:IsNPC() then
+		return
+	end
 
-    local proxy = actualShooter:GetEnemy()
-    if not IsValid(proxy) or proxy:GetClass() ~= PROXY_CLASS then
-        return
-    end
+	local proxy = actualShooter:GetEnemy()
+	if not IsValid(proxy) or proxy:GetClass() ~= PROXY_CLASS then
+		return
+	end
 
-    local attacker = proxy.attacker
-    if not IsValid(attacker) or attacker ~= actualShooter then
-        return
-    end
+	local attacker = proxy.attacker
+	if not IsValid(attacker) or attacker ~= actualShooter then
+		return
+	end
 
-    local logicVictim = proxy.logicVictim
-    local originalCallback = data.Callback
+	hook.Run("ENP_BulletFired", proxy)
 
-    data.Callback = function(shooter, tr, dmgInfo)
-        local isVictimHit = logicVictim and logicVictim:IsEqualTo(tr.Entity)
-        hook.Run("ENP_BulletHit", proxy, isVictimHit)
+	local logicVictim = proxy.logicVictim
+	local originalCallback = data.Callback
 
-        if originalCallback then
-            return originalCallback(shooter, tr, dmgInfo)
-        end
-        return true, true
-    end
+	data.Callback = function(shooter, tr, dmgInfo)
+		local isVictimHit = logicVictim and logicVictim:IsEqualTo(tr.Entity)
+		hook.Run("ENP_BulletHit", proxy, isVictimHit)
+
+		if originalCallback then
+			return originalCallback(shooter, tr, dmgInfo)
+		end
+		return true, true
+	end
 end
 
 hook.Add("EntityFireBullets", "ENP_ProxyMonitor", OnEntityFireBullets)
