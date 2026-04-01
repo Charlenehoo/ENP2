@@ -6,6 +6,7 @@ local Backlog = {}
 local function ProcessEntity(ent, ply)
 	if not IsValid(ent) then return false end
 	if not ent:IsNPC() then return false end
+	if not ply:Alive() then return false end
 
 	local distSqr = ply:GetPos():DistToSqr(ent:GetPos())
 	if distSqr > MAX_DIST * MAX_DIST then return false end

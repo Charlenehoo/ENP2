@@ -17,6 +17,10 @@ local function ValidProxies()
 				return proxy
 			else
 				if IsValid(proxy) then
+					Debugger.Print(
+						string.format("[ProxyManager] Removing orphen proxy %s", tostring(proxy)),
+						Debugger.LEVEL.INFO
+					)
 					proxy:Remove()
 				end
 				table.remove(_proxies, i + 1)
