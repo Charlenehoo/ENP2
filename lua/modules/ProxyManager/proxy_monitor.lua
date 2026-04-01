@@ -18,61 +18,36 @@ end
 --- @param entity Entity  发射子弹的实体（可能是武器或 NPC）
 --- @param data Bullet    子弹数据
 local function OnEntityFireBullets(entity, data)
-	-- 1. 获取实际开枪的 NPC
-	local actualShooter = entity
-	if IsValid(actualShooter) and actualShooter:IsWeapon() then
-		actualShooter = actualShooter:GetOwner()
-	end
-	if not IsValid(actualShooter) or not actualShooter:IsNPC() then
-		Debugger.Print("[ENP Monitor] Shooter is not a valid NPC, skipping", Debugger.LEVEL.TRACE)
-		return
-	end
+    local actualShooter = entity
+    if IsValid(actualShooter) and actualShooter:IsWeapon() then
+        actualShooter = actualShooter:GetOwner()
+    end
+    if not IsValid(actualShooter) or not actualShooter:IsNPC() then
+        return
+    end
 
-	-- 2. 获取 shooter 的敌人，这个敌人应该是 proxy 实体
-	local proxy = actualShooter:GetEnemy()
-	if not IsValid(proxy) or proxy:GetClass() ~= PROXY_CLASS then
-		Debugger.Print("[ENP Monitor] Shooter's enemy is not a valid proxy, skipping", Debugger.LEVEL.TRACE)
-		return
-	end
+    local proxy = actualShooter:GetEnemy()
+    if not IsValid(proxy) or proxy:GetClass() ~= PROXY_CLASS then
+        return
+    end
 
-	-- 3. 验证 proxy 的 attacker 确实是这个 shooter
-	local attacker = proxy.attacker
-	if not IsValid(attacker) or attacker ~= actualShooter then
-		Debugger.Print("[ENP Monitor] Proxy's attacker mismatch, skipping", Debugger.LEVEL.TRACE)
-		return
-	end
+    local attacker = proxy.attacker
+    if not IsValid(attacker) or attacker ~= actualShooter then
+        return
+    end
 
-	local logicVictim = proxy.logicVictim
+    local logicVictim = proxy.logicVictim
+    local originalCallback = data.Callback
 
-	local boneIndex = nil
-	if proxy.validBones and proxy.currentBoneIndex then
-		boneIndex = proxy.validBones[proxy.currentBoneIndex]
-	end
+    data.Callback = function(shooter, tr, dmgInfo)
+        local isVictimHit = logicVictim and logicVictim:IsEqualTo(tr.Entity)
+        hook.Run("ENP_BulletHit", proxy, isVictimHit)
 
-	local shotID = nil
-	if boneIndex then
-		shotID = proxy:RecordShot(boneIndex)
-	end
-
-	local originalCallback = data.Callback
-
-	local function wrappedCallback(shooter, tr, dmgInfo)
-		local entityHit = tr.Entity
-		local isVictimHit = IsVictimHit(logicVictim, entityHit)
-
-		if isVictimHit and boneIndex and shotID then
-			proxy:RecordHit(boneIndex, shotID)
-		end
-
-		hook.Run("ENP_BulletHit", proxy, isVictimHit, tr)
-
-		if originalCallback then
-			return originalCallback(shooter, tr, dmgInfo)
-		end
-		return true, true
-	end
-
-	data.Callback = wrappedCallback
+        if originalCallback then
+            return originalCallback(shooter, tr, dmgInfo)
+        end
+        return true, true
+    end
 end
 
 hook.Add("EntityFireBullets", "ENP_ProxyMonitor", OnEntityFireBullets)

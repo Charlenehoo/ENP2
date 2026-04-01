@@ -46,6 +46,17 @@ local function _CreateProxy(logicVictim, attacker)
 	end
 	proxy:Spawn()
 	proxy:Init(logicVictim, attacker)
+
+	Debugger.Print(
+		string.format(
+			"[ProxyManager] Created proxy %s for attacker %s, victim %s",
+			tostring(proxy),
+			tostring(attacker),
+			tostring(logicVictim)
+		),
+		Debugger.LEVEL.INFO
+	)
+
 	return proxy
 end
 

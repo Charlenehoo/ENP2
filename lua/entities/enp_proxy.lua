@@ -8,7 +8,7 @@ AddCSLuaFile()
 ENT.Base = "base_ai"
 ENT.Type = "ai"
 
-function ENT:Initialize() -- https://wiki.facepunch.com/gmod/ENTITY:Initialize
+function ENT:Initialize()
 	self:SetModel(PROXY_MODEL)
 	self:SetModelScale(SCALE_1)
 	-- self:SetNoDraw(true)
@@ -19,9 +19,9 @@ function ENT:Init(logicVictim, attacker)
 	self.logicVictim = logicVictim
 	self.attacker = attacker
 
-	self:InitHitStats()
-
-	self:ResetTimeout()
+	-- 初始化计时器
+	self.lastHitTime = CurTime()
+	self.lastBoneHitTime = CurTime()
 
 	self:SetNPCClass(CLASS_NONE)
 	attacker:AddEntityRelationship(self, D_HT, 0)
@@ -32,18 +32,24 @@ function ENT:Init(logicVictim, attacker)
 	attacker:UpdateEnemyMemory(self, InitPos)
 end
 
-function ENT:InitHitStats()
-	if not self.hitStats then
-		self.hitStats = {}
-	end
-	if not self.nextShotID then
-		self.nextShotID = 1
-	end
+-- 更新最后命中时间（任意骨骼命中）
+function ENT:UpdateLastHitTime()
+	self.lastHitTime = CurTime()
 end
 
-function ENT:ResetTimeout()
-	self.lastHitTime = CurTime()
-	self.timeoutTriggered = false
+-- 更新最后骨骼命中时间（当前骨骼命中）
+function ENT:UpdateLastBoneHitTime()
+	self.lastBoneHitTime = CurTime()
+end
+
+-- 获取最后命中时间
+function ENT:GetLastHitTime()
+	return self.lastHitTime
+end
+
+-- 获取最后骨骼命中时间
+function ENT:GetLastBoneHitTime()
+	return self.lastBoneHitTime
 end
 
 -- 计算理想位置（基于当前骨骼）
@@ -94,110 +100,10 @@ function ENT:GetNextBonePos()
 	return bonePos
 end
 
--- 超时时前进到下一个骨骼
+-- 前进到下一个骨骼（循环）
 function ENT:AdvanceToNextBone()
 	if not self.validBones or #self.validBones == 0 then
 		return
 	end
-	-- 循环递增索引
 	self.currentBoneIndex = (self.currentBoneIndex % #self.validBones) + 1
-end
-
-function ENT:CheckTimeout(timeoutSeconds)
-	if not self.lastHitTime then
-		return false
-	end
-	if self.timeoutTriggered then
-		return false
-	end
-	if CurTime() - self.lastHitTime > timeoutSeconds then
-		self.timeoutTriggered = true
-		return true
-	end
-	return false
-end
-
--- 记录一次射击，返回一个唯一 ID
-function ENT:RecordShot(boneIndex)
-	self:InitHitStats()
-	if not self.hitStats[boneIndex] then
-		self.hitStats[boneIndex] = {}
-	end
-	local shotID = self.nextShotID
-	self.nextShotID = self.nextShotID + 1
-	if self.nextShotID > 1048576 then -- 2^20
-		self.nextShotID = 1
-	end
-	table.insert(self.hitStats[boneIndex], {
-		id = shotID,
-		time = CurTime(),
-		hit = false,
-	})
-	return shotID
-end
-
--- 根据 ID 将对应的射击记录标记为命中
-function ENT:RecordHit(boneIndex, shotID)
-	if not self.hitStats or not self.hitStats[boneIndex] then
-		return
-	end
-	local queue = self.hitStats[boneIndex]
-	for _, rec in ipairs(queue) do
-		if rec.id == shotID then
-			rec.hit = true
-			break
-		end
-	end
-end
-
--- 获取指定骨骼在时间窗口内的命中率（自动清理队首超时记录）
-function ENT:GetHitRate(boneIndex, window)
-	if not self.hitStats or not self.hitStats[boneIndex] then
-		return nil
-	end
-	local queue = self.hitStats[boneIndex]
-	local cutoff = CurTime() - window
-	-- 只清理队首的超时记录（FIFO 特性）
-	while #queue > 0 and queue[1].time < cutoff do
-		table.remove(queue, 1)
-	end
-	if #queue == 0 then
-		return nil
-	end
-	local total = 0
-	local hits = 0
-	for _, rec in ipairs(queue) do
-		total = total + 1
-		if rec.hit then
-			hits = hits + 1
-		end
-	end
-	return hits / total
-end
-
--- 获取所有骨骼在时间窗口内的总体命中率（自动清理各骨骼的过期记录）
-function ENT:GetOverallHitRate(window)
-	if not self.hitStats then
-		return nil
-	end
-	local cutoff = CurTime() - window
-	local totalShots = 0
-	local totalHits = 0
-	for boneIndex, queue in pairs(self.hitStats) do
-		-- 清理该骨骼的过期记录（保持与 GetHitRate 一致的 FIFO 清理）
-		while #queue > 0 and queue[1].time < cutoff do
-			table.remove(queue, 1)
-		end
-		-- 统计有效记录
-		for _, rec in ipairs(queue) do
-			totalShots = totalShots + 1
-			if rec.hit then
-				totalHits = totalHits + 1
-			end
-		end
-	end
-	if totalShots == 0 then
-		return nil
-	end
-	return totalHits / totalShots
 end
