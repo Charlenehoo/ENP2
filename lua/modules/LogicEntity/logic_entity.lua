@@ -2,6 +2,42 @@
 -- =============================================================================
 -- 通用 class 工厂函数
 -- =============================================================================
+
+-- 生成实体方法包装器
+-- 包装后的函数会在调用时动态获取当前目标实体（优先 GetCurrentEntity，回退 GetFallbackEntity），
+-- 并自动将参数中的 LogicEntity 实例转换为原始实体，然后调用原始方法。
+-- 同时实现了快速路径：当参数中不包含任何 LogicEntity 实例时，直接调用原始方法，避免创建参数表和解包开销。
+local function make_wrapper(original_func)
+	return function(self, ...)
+		local target = self:GetCurrentEntity() or self:GetFallbackEntity()
+		if not target then
+			return
+		end
+		-- 快速路径：参数中无 LogicEntity 实例则直接调用
+		local n = select("#", ...)
+		local need_convert = false
+		for i = 1, n do
+			local arg = select(i, ...)
+			if type(arg) == "table" and arg.GetCurrentEntity then
+				need_convert = true
+				break
+			end
+		end
+		if not need_convert then
+			return original_func(target, ...)
+		end
+		-- 需要转换：构建参数表并替换所有 LogicEntity 实例为原始实体
+		local args = { ... }
+		for i = 1, n do
+			local arg = args[i]
+			if type(arg) == "table" and arg.GetCurrentEntity then
+				args[i] = arg:GetCurrentEntity()
+			end
+		end
+		return original_func(target, unpack(args))
+	end
+end
+
 local function class(name, base)
 	local cls = {}
 	cls.name = name
@@ -11,88 +47,47 @@ local function class(name, base)
 		setmetatable(cls, { __index = base })
 	end
 
+	-- 实例元方法：方法查找顺序为：
+	-- 1. 子类自身定义的方法（类表）
+	-- 2. 基类方法（递归）
+	-- 3. 实体方法（通过当前实体或备用实体），并将包装器缓存到实例的 __wrappers 表中
 	cls.__index = function(self, key)
-		-- 1. 优先返回子类自身定义的方法
+		-- 1. 子类方法
 		local method = cls[key]
 		if method ~= nil then
 			return method
 		end
 
-		-- 2. 递归查找父类的方法
+		-- 2. 基类方法（递归）
 		if base then
-			return base.__index(self, key)
-		end
-
-		-- 3. 透明转发：将调用转发给当前实体
-		local current = self:GetCurrentEntity()
-		if current then
-			local value = current[key]
-			if value ~= nil then
-				if type(value) == "function" then
-					-- 返回一个闭包，自动解包参数中的逻辑实例（带快速路径）
-					return function(_, ...)
-						local target = current -- 捕获当前实体（注意：后续可能变化，但先保持原行为）
-						local n = select("#", ...)
-						-- 快速检查是否存在需要转换的 LogicEntity 实例
-						local need_convert = false
-						for i = 1, n do
-							local arg = select(i, ...)
-							if type(arg) == "table" and arg.GetCurrentEntity then
-								need_convert = true
-								break
-							end
-						end
-						if not need_convert then
-							-- 无需转换，直接调用原始函数
-							return value(target, ...)
-						end
-						-- 需要转换，构建参数表并替换
-						local args = { ... }
-						for i = 1, n do
-							local arg = args[i]
-							if type(arg) == "table" and arg.GetCurrentEntity then
-								args[i] = arg:GetCurrentEntity()
-							end
-						end
-						return value(target, unpack(args))
-					end
-				else
-					return value
-				end
+			method = base.__index(self, key)
+			if method ~= nil then
+				return method
 			end
 		end
 
-		-- 4. 备用实体
-		local fallback = self:GetFallbackEntity()
-		if fallback then
-			local value = fallback[key]
+		-- 3. 实体方法（使用缓存表，避免重复创建包装器）
+		local wrappers = rawget(self, "__wrappers")
+		if not wrappers then
+			wrappers = {}
+			rawset(self, "__wrappers", wrappers)
+		end
+
+		local wrapper = wrappers[key]
+		if wrapper ~= nil then
+			return wrapper
+		end
+
+		local target = self:GetCurrentEntity() or self:GetFallbackEntity()
+		if target then
+			local value = target[key]
 			if value ~= nil then
 				if type(value) == "function" then
-					-- 返回闭包，处理备用实体（同样带快速路径）
-					return function(_, ...)
-						local target = fallback
-						local n = select("#", ...)
-						local need_convert = false
-						for i = 1, n do
-							local arg = select(i, ...)
-							if type(arg) == "table" and arg.GetCurrentEntity then
-								need_convert = true
-								break
-							end
-						end
-						if not need_convert then
-							return value(target, ...)
-						end
-						local args = { ... }
-						for i = 1, n do
-							local arg = args[i]
-							if type(arg) == "table" and arg.GetCurrentEntity then
-								args[i] = arg:GetCurrentEntity()
-							end
-						end
-						return value(target, unpack(args))
-					end
+					wrapper = make_wrapper(value)
+					wrappers[key] = wrapper
+					return wrapper
 				else
+					-- 非函数值不缓存（可能变化）
 					return value
 				end
 			end
@@ -101,6 +96,7 @@ local function class(name, base)
 		return nil
 	end
 
+	-- 实例赋值：转发给当前实体
 	cls.__newindex = function(self, key, value)
 		local current = self:GetCurrentEntity()
 		if current then

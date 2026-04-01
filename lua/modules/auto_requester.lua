@@ -80,7 +80,7 @@ local function ProcessCandidates(player, state)
 		if HasProxy(logicPlayer, npc) then
 			continue
 		end
-		if not logicPlayer.Alive() then
+		if not logicPlayer:Alive() then
 			continue
 		end
 
