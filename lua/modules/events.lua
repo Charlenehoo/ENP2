@@ -183,7 +183,7 @@ local function FireEvents(ply)
 end
 
 -- 每帧主逻辑
-hook.Add("Think", "ThreatEvaluationSystem", function()
+hook.Add("Tick", "ThreatEvaluationSystem", function()
 	local ply = GetLocalPlayer()
 	if not IsValid(ply) then
 		return
