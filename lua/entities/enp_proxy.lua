@@ -119,11 +119,13 @@ function ENT:IsActive()
 	return self.active
 end
 
-function ENT:UpdateActiveMissTime(delta)
-	if delta > 0 then
-		self.activeMissTime = self.activeMissTime + delta
+function ENT:UpdateActiveMissTime(currentTime)
+	if currentTime <= self.lastActiveUpdate then
+		return
 	end
-	self.lastActiveUpdate = CurTime()
+	local delta = currentTime - self.lastActiveUpdate
+	self.activeMissTime = self.activeMissTime + delta
+	self.lastActiveUpdate = currentTime
 end
 
 function ENT:ResetActiveMissTime()

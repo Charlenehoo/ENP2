@@ -67,11 +67,7 @@ hook.Add("Tick", "ENP_ProxyBehavior_Tick", function()
 		-- 后续逻辑统一使用 proxy:IsActive()
 		if proxy:IsActive() then
 			-- 累积未命中时间
-			local lastUpdate = proxy.lastActiveUpdate
-			local delta = curTime - lastUpdate
-			if delta > 0 then
-				proxy:UpdateActiveMissTime(delta)
-			end
+			proxy:UpdateActiveMissTime(curTime)
 
 			-- 检查整体超时
 			if proxy:GetActiveMissTime() >= PROXY_TIMEOUT_SECONDS then
