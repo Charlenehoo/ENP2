@@ -19,12 +19,9 @@ function ENT:Init(logicVictim, attacker)
 	self.logicVictim = logicVictim
 	self.attacker = attacker
 
+	-- 计时器字段
 	self.lastHitTime = CurTime()
 	self.lastBoneHitTime = CurTime()
-	self.lastShotTime = CurTime()
-	self.active = false -- 当前是否活跃
-	self.activeMissTime = 0 -- 活跃期间累积未命中时间
-	self.lastActiveUpdate = 0 -- 上次更新活跃计时的时间
 
 	self:SetNPCClass(CLASS_NONE)
 	attacker:AddEntityRelationship(self, D_HT, 0)
@@ -91,6 +88,12 @@ function ENT:AdvanceToNextBone()
 	self.currentBoneIndex = (self.currentBoneIndex % #self.validBones) + 1
 end
 
+-- ========== 计时器方法 ==========
+function ENT:UpdateLastHitTime()
+	self.lastHitTime = CurTime()
+	self:UpdateLastBoneHitTime()
+end
+
 function ENT:UpdateLastBoneHitTime()
 	self.lastBoneHitTime = CurTime()
 end
@@ -101,47 +104,4 @@ end
 
 function ENT:GetLastBoneHitTime()
 	return self.lastBoneHitTime
-end
-
-function ENT:GetLastShotTime()
-	return self.lastShotTime
-end
-
--- 新增方法
-function ENT:SetActive(active)
-	self.active = active
-	if active then
-		self.lastActiveUpdate = CurTime()
-	end
-end
-
-function ENT:IsActive()
-	return self.active
-end
-
-function ENT:UpdateActiveMissTime(currentTime)
-	if currentTime <= self.lastActiveUpdate then
-		return
-	end
-	local delta = currentTime - self.lastActiveUpdate
-	self.activeMissTime = self.activeMissTime + delta
-	self.lastActiveUpdate = currentTime
-end
-
-function ENT:ResetActiveMissTime()
-	self.activeMissTime = 0
-end
-
-function ENT:GetActiveMissTime()
-	return self.activeMissTime
-end
-
-function ENT:UpdateLastHitTime()
-	self.lastHitTime = CurTime()
-	self:ResetActiveMissTime()
-	self:UpdateLastBoneHitTime()
-end
-
-function ENT:UpdateLastShotTime()
-	self.lastShotTime = CurTime()
 end
