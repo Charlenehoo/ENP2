@@ -19,9 +19,12 @@ function ENT:Init(logicVictim, attacker)
 	self.logicVictim = logicVictim
 	self.attacker = attacker
 
-	-- 初始化计时器
 	self.lastHitTime = CurTime()
 	self.lastBoneHitTime = CurTime()
+	self.lastShotTime = CurTime()
+	self.active = false -- 当前是否活跃
+	self.activeMissTime = 0 -- 活跃期间累积未命中时间
+	self.lastActiveUpdate = 0 -- 上次更新活跃计时的时间
 
 	self:SetNPCClass(CLASS_NONE)
 	attacker:AddEntityRelationship(self, D_HT, 0)
@@ -30,26 +33,6 @@ function ENT:Init(logicVictim, attacker)
 	self:SetPos(InitPos)
 	attacker:SetEnemy(self)
 	attacker:UpdateEnemyMemory(self, InitPos)
-end
-
--- 更新最后命中时间（任意骨骼命中）
-function ENT:UpdateLastHitTime()
-	self.lastHitTime = CurTime()
-end
-
--- 更新最后骨骼命中时间（当前骨骼命中）
-function ENT:UpdateLastBoneHitTime()
-	self.lastBoneHitTime = CurTime()
-end
-
--- 获取最后命中时间
-function ENT:GetLastHitTime()
-	return self.lastHitTime
-end
-
--- 获取最后骨骼命中时间
-function ENT:GetLastBoneHitTime()
-	return self.lastBoneHitTime
 end
 
 -- 计算理想位置（基于当前骨骼）
@@ -106,4 +89,57 @@ function ENT:AdvanceToNextBone()
 		return
 	end
 	self.currentBoneIndex = (self.currentBoneIndex % #self.validBones) + 1
+end
+
+function ENT:UpdateLastBoneHitTime()
+	self.lastBoneHitTime = CurTime()
+end
+
+function ENT:GetLastHitTime()
+	return self.lastHitTime
+end
+
+function ENT:GetLastBoneHitTime()
+	return self.lastBoneHitTime
+end
+
+function ENT:GetLastShotTime()
+	return self.lastShotTime
+end
+
+-- 新增方法
+function ENT:SetActive(active)
+	self.active = active
+	if active then
+		self.lastActiveUpdate = CurTime()
+	end
+end
+
+function ENT:IsActive()
+	return self.active
+end
+
+function ENT:UpdateActiveMissTime(delta)
+	if delta > 0 then
+		self.activeMissTime = self.activeMissTime + delta
+	end
+	self.lastActiveUpdate = CurTime()
+end
+
+function ENT:ResetActiveMissTime()
+	self.activeMissTime = 0
+end
+
+function ENT:GetActiveMissTime()
+	return self.activeMissTime
+end
+
+function ENT:UpdateLastHitTime()
+	self.lastHitTime = CurTime()
+	self:ResetActiveMissTime()
+	self:UpdateLastBoneHitTime()
+end
+
+function ENT:UpdateLastShotTime()
+	self.lastShotTime = CurTime()
 end
