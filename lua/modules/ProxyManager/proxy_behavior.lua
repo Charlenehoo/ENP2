@@ -16,6 +16,29 @@ hook.Add("ENP_BulletFired", "ENP_ProxyBehavior_UpdateShotTime", function(proxy)
 	)
 end)
 
+hook.Add("ENP_BulletHit", "ENP_ProxyBehavior_RecordHit", function(proxy, isVictimHit)
+	if not IsValid(proxy) then
+		return
+	end
+	if isVictimHit then
+		local curTime = CurTime()
+		local oldHitTime = proxy:GetLastHitTime()
+		local oldBoneHitTime = proxy:GetLastBoneHitTime()
+		proxy:UpdateLastHitTime()
+		proxy:UpdateLastBoneHitTime()
+		Debugger.Print(
+			string.format(
+				"[ProxyBehavior] Proxy %s hit victim, extending life. Time since last hit: %.2fs, since last bone hit: %.2fs, accumulated miss reset (active=%s)",
+				tostring(proxy),
+				curTime - oldHitTime,
+				curTime - oldBoneHitTime,
+				tostring(proxy:IsActive())
+			),
+			Debugger.LEVEL.TRACE
+		)
+	end
+end)
+
 hook.Add("Tick", "ENP_ProxyBehavior_Tick", function()
 	for proxy in ProxyManager.ValidProxies() do
 		if not IsValid(proxy) then
@@ -77,28 +100,5 @@ hook.Add("Tick", "ENP_ProxyBehavior_Tick", function()
 
 		-- 始终更新位置
 		proxy:SetPos(proxy:GetIdealPos())
-	end
-end)
-
-hook.Add("ENP_BulletHit", "ENP_ProxyBehavior_RecordHit", function(proxy, isVictimHit)
-	if not IsValid(proxy) then
-		return
-	end
-	if isVictimHit then
-		local curTime = CurTime()
-		local oldHitTime = proxy:GetLastHitTime()
-		local oldBoneHitTime = proxy:GetLastBoneHitTime()
-		proxy:UpdateLastHitTime()
-		proxy:UpdateLastBoneHitTime()
-		Debugger.Print(
-			string.format(
-				"[ProxyBehavior] Proxy %s hit victim, extending life. Time since last hit: %.2fs, since last bone hit: %.2fs, accumulated miss reset (active=%s)",
-				tostring(proxy),
-				curTime - oldHitTime,
-				curTime - oldBoneHitTime,
-				tostring(proxy:IsActive())
-			),
-			Debugger.LEVEL.TRACE
-		)
 	end
 end)
