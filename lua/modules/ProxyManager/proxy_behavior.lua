@@ -14,6 +14,14 @@ hook.Add("Tick", "ENP_ProxyBehavior_Tick", function()
 		local curTime = CurTime()
 
 		if curTime - proxy:GetLastHeartbeatTime() > HEARTBEAD_TIMEOUT_SECONDS then
+			Debugger.Print(
+				string.format(
+					"[ProxyBehavior] Removing proxy %s due to heartbeat timeout (%.1fs without heartbeat)",
+					tostring(proxy),
+					HEARTBEAD_TIMEOUT_SECONDS
+				),
+				Debugger.LEVEL.INFO
+			)
 			proxy:Remove()
 			continue
 		end
