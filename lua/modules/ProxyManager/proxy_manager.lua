@@ -26,17 +26,17 @@ local function ValidProxies()
 	end
 end
 
-local function _HasExistingProxy(logicVictim, attacker)
+local function _GetExistingProxy(logicVictim, attacker)
 	for proxy in ValidProxies() do
 		if proxy.attacker ~= attacker then
 			continue
 		end
 
 		if proxy.logicVictim and proxy.logicVictim:IsEqualTo(logicVictim) then
-			return true
+			return proxy
 		end
 	end
-	return false
+	return nil
 end
 
 local function _CreateProxy(logicVictim, attacker)
@@ -75,15 +75,16 @@ local function RequestProxy(victim, attacker)
 		return nil
 	end
 
-	if _HasExistingProxy(logicVictim, attacker) then
-		return nil
+	local proxy = _GetExistingProxy(logicVictim, attacker)
+	if not proxy then
+		-- No proxy exists, create a new one
+		proxy = _CreateProxy(logicVictim, attacker)
+		if IsValid(proxy) then
+			table.insert(_proxies, proxy)
+		end
 	end
 
-	local proxy = _CreateProxy(logicVictim, attacker)
-	if IsValid(proxy) then
-		table.insert(_proxies, proxy)
-		return proxy
-	end
+	hook.Run("ENP_Heartbeat", proxy)
 end
 
 ProxyManager.PROXY_CLASS = PROXY_CLASS

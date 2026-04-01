@@ -22,6 +22,7 @@ function ENT:Init(logicVictim, attacker)
 	-- 计时器字段
 	self.lastHitTime = CurTime()
 	self.lastBoneHitTime = CurTime()
+	self.lastHeartbeatTime = CurTime()
 
 	self:SetNPCClass(CLASS_NONE)
 	attacker:AddEntityRelationship(self, D_HT, 0)
@@ -98,10 +99,18 @@ function ENT:UpdateLastBoneHitTime()
 	self.lastBoneHitTime = CurTime()
 end
 
+function ENT:UpdateLastHeartbeatTime()
+	self.lastHeartbeatTime = CurTime()
+end
+
 function ENT:GetLastHitTime()
 	return self.lastHitTime
 end
 
 function ENT:GetLastBoneHitTime()
 	return self.lastBoneHitTime
+end
+
+function ENT:GetLastHeartbeatTime()
+	return self.lastHeartbeatTime
 end

@@ -1,8 +1,9 @@
 -- lua/modules/ProxyManager/proxy_behavior.lua
 local Debugger = include("modules/util/debugger.lua")
 
-local BONE_TIMEOUT_SECONDS = 0.3 -- 骨骼未命中超时（秒）
-local PROXY_TIMEOUT_SECONDS = 7.5 -- 代理整体未命中超时（秒）
+local BONE_TIMEOUT_SECONDS = 0.3  -- 骨骼未命中超时（秒）
+local PROXY_TIMEOUT_SECONDS = 9.0 -- 代理整体未命中超时（秒）
+local HEARTBEAD_TIMEOUT_SECONDS = 3.0
 
 hook.Add("Tick", "ENP_ProxyBehavior_Tick", function()
 	for proxy in ProxyManager.ValidProxies() do
@@ -11,6 +12,11 @@ hook.Add("Tick", "ENP_ProxyBehavior_Tick", function()
 		end
 
 		local curTime = CurTime()
+
+		if curTime - proxy:GetLastHeartbeatTime() > HEARTBEAD_TIMEOUT_SECONDS then
+			proxy:Remove()
+			continue
+		end
 
 		-- 检查代理整体超时（基于最后一次命中时间）
 		if curTime - proxy:GetLastHitTime() > PROXY_TIMEOUT_SECONDS then
@@ -64,4 +70,19 @@ hook.Add("ENP_BulletHit", "ENP_ProxyBehavior_RecordHit", function(proxy, isVicti
 			Debugger.LEVEL.TRACE
 		)
 	end
+end)
+
+hook.Add("ENP_Heartbeat", "ENP_ProxyBehavior_RecordHeartbeat", function(proxy)
+	if not IsValid(proxy) then
+		return
+	end
+	-- 更新代理的最后心跳时间
+	proxy:UpdateLastHeartbeatTime()
+	Debugger.Print(
+		string.format(
+			"[ProxyBehavior] Proxy %s received heartbeat",
+			tostring(proxy)
+		),
+		Debugger.LEVEL.TRACE
+	)
 end)
