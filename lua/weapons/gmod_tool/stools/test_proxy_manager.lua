@@ -17,14 +17,16 @@ function TOOL:RightClick(trace)
 	local e = trace.Entity
 	print("RightClick entity:", e, e:GetClass())
 	if IsValid(e) then
-		ProxyManager.RequestProxy(e, self.attacker)
+		self.victim = e
 		return true
 	else
-		ProxyManager.RequestProxy(Entity(1), self.attacker)
+		self.victim = Entity(1)
 		return false
 	end
 end
 
-function TOOL:Reload(trace) end
+function TOOL:Reload(trace)
+	ProxyManager.RequestProxy(self.victim, self.attacker)
+end
 
 function TOOL:Think() end
