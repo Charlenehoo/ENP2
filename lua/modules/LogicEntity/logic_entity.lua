@@ -102,14 +102,12 @@ local function class(name, base)
 		if current then
 			current[key] = value
 		else
-			error("No valid current entity to write to")
+			rawset(self, key, value)
 		end
 	end
 
 	return cls
 end
-
-
 
 -- =============================================================================
 -- LogicEntity 基类
