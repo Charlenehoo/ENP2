@@ -93,19 +93,35 @@ local function class(name, base)
 			end
 		end
 
+		-- 4. 实例私有属性
+		local properties = rawget(self, "__properties")
+		if properties then
+			local prop = properties[key]
+			if prop ~= nil then
+				return prop
+			end
+		end
+
 		return nil
 	end
 
-	-- 实例赋值：转发给当前实体
 	cls.__newindex = function(self, key, value)
 		local current = self:GetCurrentEntity()
-		if current then
+		if not current then
+			error("No valid current entity to write to")
+		end
+
+		if current[key] ~= nil then
 			current[key] = value
 		else
-			rawset(self, key, value)
+			local properties = rawget(self, "__properties")
+			if not properties then
+				properties = {}
+				rawset(self, "__properties", properties)
+			end
+			properties[key] = value
 		end
 	end
-
 	return cls
 end
 
